@@ -1,0 +1,36 @@
+{
+  "name": "nico-newtab",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "npm run typecheck && node scripts/notices.mjs && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "assets": "node scripts/prepare-assets.mjs",
+    "package": "npm run build && node scripts/package.mjs",
+    "test:e2e": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.577.0",
+    "nico-glass-kit": "0.3.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@types/chrome": "^0.1.37",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "fflate": "^0.8.2",
+    "prettier": "^3.6.2",
+    "sharp": "^0.34.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.0",
+    "vitest": "^4.0.0"
+  }
+}

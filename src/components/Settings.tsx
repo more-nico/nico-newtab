@@ -98,7 +98,7 @@ export function Settings({
         <GlassSegmentedControl
           className="settings-tabs"
           size="sm"
-          cornerRadius={20}
+          cornerRadius={26}
           aria-label="设置分类"
           value={tab}
           onChange={(key) => setTab(key as SettingsTab)}
@@ -108,7 +108,8 @@ export function Settings({
             e.preventDefault();
             const next =
               ids[
-                (ids.indexOf(tab) + (e.key === "ArrowRight" ? 1 : ids.length - 1)) %
+                (ids.indexOf(tab) +
+                  (e.key === "ArrowRight" ? 1 : ids.length - 1)) %
                   ids.length
               ];
             setTab(next);
@@ -119,7 +120,11 @@ export function Settings({
           items={[
             { key: "wallpaper", label: "壁纸", icon: <Images size={15} /> },
             { key: "appearance", label: "外观", icon: <Palette size={15} /> },
-            { key: "data", label: "备份", icon: <SlidersHorizontal size={15} /> },
+            {
+              key: "data",
+              label: "备份",
+              icon: <SlidersHorizontal size={15} />,
+            },
           ]}
           {...base}
         />
@@ -132,7 +137,11 @@ export function Settings({
             ) : (
               <CheckCheck size={14} />
             )}
-            {busy ? "正在处理…" : saving ? "正在保存…" : "更改自动保存在此浏览器"}
+            {busy
+              ? "正在处理…"
+              : saving
+                ? "正在保存…"
+                : "更改自动保存在此浏览器"}
           </span>
           <GlassButton
             size="sm"
@@ -157,7 +166,7 @@ export function Settings({
                 </div>
                 <GlassSegmentedControl
                   className="wallpaper-picker"
-                  cornerRadius={20}
+                  cornerRadius={26}
                   aria-label="选择壁纸"
                   value={settings.wallpaper}
                   onChange={select}
@@ -478,7 +487,7 @@ export function Settings({
                 </div>
                 <GlassSurface
                   className="settings-note"
-                  cornerRadius={10}
+                  cornerRadius={26}
                   {...base}
                 >
                   玻璃效果会根据浏览器能力自动适配。系统开启“减少动态效果”时，页面会减少动画。
@@ -493,7 +502,7 @@ export function Settings({
                 </div>
                 <GlassSurface
                   className="backup-card"
-                  cornerRadius={16}
+                  cornerRadius={26}
                   {...base}
                 >
                   <span className="backup-icon">
@@ -513,7 +522,7 @@ export function Settings({
                 </GlassSurface>
                 <GlassSurface
                   className="backup-card"
-                  cornerRadius={16}
+                  cornerRadius={26}
                   {...base}
                 >
                   <span className="backup-icon">
@@ -553,7 +562,7 @@ export function Settings({
                     className="import-confirm"
                     role="region"
                     aria-label="确认恢复备份"
-                    cornerRadius={12}
+                    cornerRadius={26}
                     {...base}
                   >
                     <strong>用这份备份替换当前内容？</strong>
@@ -591,7 +600,7 @@ export function Settings({
                 )}
                 <GlassSurface
                   className="settings-note"
-                  cornerRadius={10}
+                  cornerRadius={26}
                   {...base}
                 >
                   无需账号，不收集使用数据。卸载扩展会清除本地内容，请提前备份。

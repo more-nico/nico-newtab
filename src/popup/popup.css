@@ -1,0 +1,190 @@
+* {
+  box-sizing: border-box;
+}
+/* Chrome draws no frame around an extension popup, so every pixel the page
+   leaves transparent shows whatever is behind the popup. That is the whole
+   trick behind the rounded window: .popup owns the shape, clips the artwork to
+   it, and the four corners end up unpainted. */
+html,
+body {
+  background: transparent;
+}
+body {
+  width: 340px;
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
+    "PingFang SC", sans-serif;
+  color: #fff;
+}
+.popup {
+  position: relative;
+  overflow: hidden;
+  /* The same radius as every other glass shell in the app. */
+  border-radius: 26px;
+  padding: 12px;
+  /* The same stand-in backdrop the new tab page falls back to, so the popup
+     never shows a bare white sheet behind the glass. */
+  background: linear-gradient(135deg, #829ca5, #677c81 45%, #87968e);
+}
+.popup-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-position: center;
+  background-size: cover;
+  transform: scale(1.12);
+  filter: blur(20px) brightness(0.78);
+}
+.popup-panel {
+  display: block;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+.popup-panel > .ngs-motion > .ngs-content {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  font-size: 13px;
+}
+/* 26px shell − 4px of inner padding, the same control radius as the dialogs. */
+.popup-panel .ngs-btn--capsule,
+.popup-panel .ngs-input {
+  border-radius: 22px !important;
+}
+.primary-button {
+  --ngs-glass-tint: rgb(88 114 89) !important;
+  --ngs-glass-tint-strength: 0.72 !important;
+  color: #fff !important;
+}
+.page-row {
+  display: block;
+  width: 100%;
+}
+.page-row > .ngs-motion > .ngs-content {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+}
+.page-icon {
+  display: grid;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  color: var(--ngs-text-dim);
+  overflow: hidden;
+}
+.page-icon img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+.page-copy {
+  min-width: 0;
+}
+.page-copy strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.page-copy small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ngs-text-dim);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.popup-label {
+  display: block;
+  margin: 13px 0 7px;
+  font-size: 11px;
+  color: var(--ngs-text-dim);
+}
+.popup-input {
+  width: 100%;
+}
+.popup-hint {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--ngs-text-dim);
+}
+.popup-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: var(--ngs-tone-danger);
+}
+.popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+.popup-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ngs-text-dim);
+}
+.popup-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 6px 2px;
+  text-align: center;
+}
+.popup-empty-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  color: var(--ngs-text-dim);
+}
+.popup-empty-icon.is-done {
+  color: var(--ngs-tone-success);
+}
+.popup-empty strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.popup-empty p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--ngs-text-dim);
+}
+.popup-empty .ngs-btn {
+  margin-top: 3px;
+}
+.spinning {
+  animation: popup-spin 1s linear infinite;
+}
+@keyframes popup-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinning {
+    animation-duration: 0.001ms;
+  }
+}

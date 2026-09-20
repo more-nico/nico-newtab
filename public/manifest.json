@@ -6,7 +6,17 @@
   "description": "在印象派画作与轻盈玻璃之间，开始新的浏览。包含时间、搜索、常用网站与本地壁纸。",
   "minimum_chrome_version": "120",
   "chrome_url_overrides": { "newtab": "index.html" },
-  "permissions": ["storage", "search", "favicon"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "添加到 Nico 新标签页",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "permissions": ["storage", "search", "favicon", "activeTab"],
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",

@@ -20,6 +20,14 @@
   --ink: #34443f;
   --muted: #7b8780;
   --accent: #526d5e;
+  /* One radius family, anchored on the round close button: the kit's icon/lg
+     button is 52px square, so its radius is 26px. Every glass shell uses that
+     same 26px, controls nested in a shell use 26 − 4px of inner padding, and
+     segments nested in a control use 18px. Component `cornerRadius` props must
+     mirror --radius-shell (the kit writes them inline, a var cannot reach it). */
+  --radius-shell: 26px;
+  --radius-control: 22px;
+  --radius-inner: 18px;
 }
 * {
   box-sizing: border-box;
@@ -719,19 +727,29 @@ button:disabled {
 }
 .settings-tabs .ngs-segment {
   min-width: 0;
-  border-radius: 16px;
+  border-radius: var(--radius-control);
 }
-/* One radius scale across the dialog: panes use 20px, the controls nested in
-   them use 20 − 4px of inner padding = 16px. The wallpaper picker is a pane-
-   sized block, so it keeps its own 20px (set on the component). */
+/* One radius scale across the dialog: shells use 26px — literally the radius of
+   the round close button — the controls nested in them 26 − 4px = 22px, and the
+   segments inside those controls 18px. The wallpaper picker is a shell-sized
+   block, so it keeps 26px (set on the component) with 22px slots. */
 .dialog-body .ngs-btn--capsule {
-  border-radius: 16px !important;
+  border-radius: var(--radius-control) !important;
 }
 .dialog-body .ngs-segmented:not(.wallpaper-picker) {
-  border-radius: 16px !important;
+  border-radius: var(--radius-control) !important;
 }
 .dialog-body .ngs-segmented:not(.wallpaper-picker) .ngs-segment {
-  border-radius: 12px;
+  border-radius: var(--radius-inner);
+}
+/* The kit keeps its own radius for these two and takes no cornerRadius prop, so
+   they need the override to join the family: an alert is a block like the cards
+   (shell radius), an input is a control (control radius). */
+.ngs-alert {
+  border-radius: var(--radius-shell) !important;
+}
+.dialog-body .ngs-input {
+  border-radius: var(--radius-control) !important;
 }
 .section-heading {
   display: flex;
@@ -762,7 +780,7 @@ button:disabled {
   grid-auto-columns: minmax(0, 1fr);
   gap: 4px;
 }
-/* Concentric with the 18px panel: 18 - 4px inline padding. */
+/* Concentric with the 26px shell: 26 - 4px inline padding. */
 .wallpaper-picker .ngs-segment {
   min-width: 0;
   flex-direction: column;
@@ -770,7 +788,7 @@ button:disabled {
   min-height: 88px;
   padding: 9px 10px;
   font-size: 11px;
-  border-radius: 16px;
+  border-radius: var(--radius-control);
 }
 .wallpaper-slot-label {
   min-width: 0;
@@ -783,7 +801,7 @@ button:disabled {
   flex: none;
   width: 92px;
   height: 56px;
-  border-radius: 10px;
+  border-radius: 14px;
   object-fit: cover;
   background: color-mix(in srgb, currentColor 14%, transparent);
 }

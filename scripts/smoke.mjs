@@ -109,13 +109,14 @@ for (const channel of channels) {
       await expect(page.locator(".shortcut-form .ngs-input")).toHaveCount(2);
       for (const input of await page
         .locator(".shortcut-form .ngs-input")
-        .all()) {
+        .all())
         await expect(input).toHaveAttribute("data-ngs-quality", "high");
-        await expect(input.locator(".ngs-effect")).toHaveCSS(
-          "backdrop-filter",
-          /url/,
-        );
-      }
+      // Refraction under the MV3 CSP lives on the dialog pane: the surfaces
+      // nested inside it intentionally drop their own backdrop-filter, because
+      // that filter only ever sampled the pane's empty backdrop root.
+      await expect(
+        page.locator(".dialog-body > .ngs-motion > .ngs-effect"),
+      ).toHaveCSS("backdrop-filter", /url/);
       await page.getByLabel("网站名称", { exact: true }).fill(name);
       await page.getByLabel("网站地址", { exact: true }).fill(url);
       await expect(page.getByLabel("网站名称", { exact: true })).toHaveValue(
@@ -193,7 +194,13 @@ for (const channel of channels) {
       ["巴黎街道", "巴黎街道，雨天"],
       ["睡莲", "睡莲"],
     ]) {
-      await page.getByRole("radio", { name: label, exact: true }).click();
+      // The picker follows the pointer, and the kit's spring keeps a couple of
+      // pixels of creep going the whole time it is hovered, so Playwright never
+      // sees a "stable" box. Click where it is right now instead — the slot is
+      // 200px wide, the creep is under 3px.
+      await page
+        .getByRole("radio", { name: label, exact: true })
+        .click({ force: true });
       await expect(page.locator(".wallpaper")).toHaveClass(/is-loaded/);
       await expect(other.locator(".art-credit")).toContainText(title);
     }
@@ -501,6 +508,56 @@ for (const channel of channels) {
       "background-image",
       /blob:/,
     );
+    stage = "toolbar popup adds the current page";
+    console.log(channel, stage);
+    const popupOnly = await context.newPage();
+    await popupOnly.goto(`chrome-extension://${browser.id}/popup.html`);
+    await expect(popupOnly.locator(".popup-panel")).toHaveAttribute(
+      "data-ngs-quality",
+      "high",
+    );
+    // Opened as a tab the active tab is the popup itself, so there is no
+    // addable address — the same guard that covers chrome:// and file://.
+    await expect(popupOnly.getByText("这个页面不能添加")).toBeVisible();
+    await popupOnly.close();
+    const stubPopup = async () => {
+      const page = await context.newPage();
+      // Stand in for the activeTab grant a toolbar click would hand over.
+      await page.addInitScript(() => {
+        Object.defineProperty(chrome.tabs, "query", {
+          configurable: true,
+          value: async () => [
+            {
+              id: 7,
+              url: "https://developer.mozilla.org/en-US/",
+              title: "MDN Web Docs",
+            },
+          ],
+        });
+      });
+      await page.goto(`chrome-extension://${browser.id}/popup.html`);
+      return page;
+    };
+    const popup = await stubPopup();
+    await expect(popup.getByLabel("网站名称")).toHaveValue("MDN Web Docs");
+    await popup.getByRole("button", { name: "添加", exact: true }).click();
+    await expect(popup.getByText("已添加到常用网站")).toBeVisible();
+    await expect(reopened.locator(".shortcut-name")).toContainText([
+      "MDN",
+      "GitHub",
+      "MDN Web Docs",
+      "添加网站",
+    ]);
+    await popup.close();
+    const duplicate = await stubPopup();
+    await expect(
+      duplicate.getByText("这个网站已经在常用网站里了。"),
+    ).toBeVisible();
+    await expect(
+      duplicate.getByRole("button", { name: "添加", exact: true }),
+    ).toBeDisabled();
+    await duplicate.close();
+
     expect(errors).toEqual([]);
     expect(badRequests).toEqual([]);
     results.push({
@@ -531,6 +588,7 @@ for (const channel of channels) {
         "IME",
         "reduced motion",
         "browser restart persistence",
+        "toolbar popup add flow",
       ],
     });
     console.log(`${channel}: PASS (${browser.version})`);

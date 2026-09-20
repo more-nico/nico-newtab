@@ -9,15 +9,17 @@ export type GlassMaterialProps = Pick<
 
 export interface GlassMaterial {
   /**
-   * The one transparent pane every component shares. Tint and tint strength
-   * stay at the kit defaults (a neutral light/dark pane), and `overLight` is
-   * left unset so each surface reads its own backdrop — this is the material
-   * the glass-kit playground drives its panels with.
+   * Everything the pointer can touch or hover: buttons, sliders, inputs, the
+   * home tiles — and the containers that group them (cards, notes, segmented
+   * tracks, the wallpaper picker, the toast and the alert). Containers follow
+   * the pointer too, because a glass UI where only atoms react reads as flat.
    */
   base: GlassMaterialProps;
   /**
-   * Window shells (设置 / 网站编辑). Same pane, but rigid: the dialog frame must
-   * not chase the pointer while everything inside it still reacts.
+   * The dialog's own sheet — the pane the window is made of (设置 / 网站编辑).
+   * Rigid on purpose: the window frame must not chase the pointer while
+   * everything inside it still reacts. That is the only surface that opts out,
+   * so keep this list at "the window itself" and nothing else.
    */
   panel: GlassMaterialProps;
 }

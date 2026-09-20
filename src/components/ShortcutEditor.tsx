@@ -63,7 +63,7 @@ export function ShortcutEditor({
         if (!busy) onClose();
       }}
       head={
-        <GlassSurface className="dialog-head" cornerRadius={20} {...panel}>
+        <GlassSurface className="dialog-head" cornerRadius={26} {...panel}>
           <span className="dialog-title">{title}</span>
         </GlassSurface>
       }

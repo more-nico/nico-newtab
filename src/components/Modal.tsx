@@ -111,13 +111,15 @@ export function Modal({
       }
       if (
         event.shiftKey &&
-        (document.activeElement === first || !pane.contains(document.activeElement))
+        (document.activeElement === first ||
+          !pane.contains(document.activeElement))
       ) {
         event.preventDefault();
         last?.focus();
       } else if (
         !event.shiftKey &&
-        (document.activeElement === last || !pane.contains(document.activeElement))
+        (document.activeElement === last ||
+          !pane.contains(document.activeElement))
       ) {
         event.preventDefault();
         first.focus();
@@ -166,7 +168,7 @@ export function Modal({
         </div>
         <GlassSurface
           className="dialog-pane dialog-body"
-          cornerRadius={20}
+          cornerRadius={26}
           {...panel}
         >
           <div className="dialog-content" ref={scroller}>

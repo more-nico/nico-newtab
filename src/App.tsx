@@ -701,7 +701,7 @@ export default function App() {
             <GlassSurface
               className="toast"
               role="status"
-              cornerRadius={16}
+              cornerRadius={26}
               {...material.base}
             >
               <span>{notice}</span>

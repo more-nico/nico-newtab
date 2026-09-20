@@ -4,12 +4,21 @@ import type { AppSettings } from "../types";
 
 export type GlassMaterialProps = Pick<
   GlassSurfaceProps,
-  "optics" | "elasticity" | "highlightIntensity" | "overLight"
+  "optics" | "elasticity" | "highlightIntensity"
 >;
 
 export interface GlassMaterial {
+  /**
+   * The one transparent pane every component shares. Tint and tint strength
+   * stay at the kit defaults (a neutral light/dark pane), and `overLight` is
+   * left unset so each surface reads its own backdrop — this is the material
+   * the glass-kit playground drives its panels with.
+   */
   base: GlassMaterialProps;
-  light: GlassMaterialProps;
+  /**
+   * Window shells (设置 / 网站编辑). Same pane, but rigid: the dialog frame must
+   * not chase the pointer while everything inside it still reacts.
+   */
   panel: GlassMaterialProps;
 }
 
@@ -27,19 +36,14 @@ export function createGlassMaterial(
     curvature: settings.glass.curvature,
     dispersion: settings.glass.dispersion,
   };
-  const base: GlassMaterialProps = {
-    optics,
-    highlightIntensity: settings.glass.highlight,
-    elasticity: reducedMotion ? 0 : settings.glass.elasticity,
-  };
+  const highlightIntensity = settings.glass.highlight;
   return {
-    base,
-    light: { ...base, overLight: true },
-    panel: {
-      ...base,
-      overLight: true,
-      optics: { ...optics, tintStrength: 0.8 },
+    base: {
+      optics,
+      highlightIntensity,
+      elasticity: reducedMotion ? 0 : settings.glass.elasticity,
     },
+    panel: { optics, highlightIntensity, elasticity: 0 },
   };
 }
 

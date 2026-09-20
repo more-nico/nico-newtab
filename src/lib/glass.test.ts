@@ -19,11 +19,30 @@ describe("global glass material", () => {
       highlightIntensity: 1,
       elasticity: 0.2,
     });
-    expect(material.light.overLight).toBe(true);
-    expect(material.panel.optics).toEqual({
-      ...material.base.optics,
-      tintStrength: 0.8,
-    });
+  });
+
+  it("carries no tint of its own, so every window stays transparent", () => {
+    const settings = defaultState().settings;
+    const { base, panel } = createGlassMaterial(settings, false);
+
+    for (const material of [base, panel]) {
+      // No tint or tintStrength: the kit's neutral pane and its automatic
+      // light/dark adaptation stay in charge.
+      expect(material.optics).not.toHaveProperty("tint");
+      expect(material.optics).not.toHaveProperty("tintStrength");
+      expect(material).not.toHaveProperty("overLight");
+    }
+  });
+
+  it("keeps window shells rigid while everything around them stays elastic", () => {
+    const settings = defaultState().settings;
+    settings.glass.elasticity = 0.4;
+    const { base, panel } = createGlassMaterial(settings, false);
+
+    expect(base.elasticity).toBe(0.4);
+    expect(panel.elasticity).toBe(0);
+    expect(panel.optics).toEqual(base.optics);
+    expect(panel.highlightIntensity).toBe(base.highlightIntensity);
   });
 
   it("keeps optics but disables elasticity for reduced motion", () => {

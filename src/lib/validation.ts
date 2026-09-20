@@ -56,8 +56,11 @@ export function parseState(value: unknown): AppState {
     return fail();
   const s = value.settings;
   // State written before glass controls existed remains valid and migrates to
-  // the exact playground defaults on the next successful save.
+  // the exact playground defaults on the next successful save. The retired
+  // "medium" tier is folded into "high" so older saves keep their material.
   const glass = s.glass === undefined ? DEFAULT_GLASS_SETTINGS : s.glass;
+  const quality: AppState["settings"]["quality"] =
+    s.quality === "low" ? "low" : "high";
   if (
     !(s.fit === "cover" || s.fit === "contain") ||
     !(s.clockFormat === "12" || s.clockFormat === "24") ||
@@ -132,7 +135,7 @@ export function parseState(value: unknown): AppState {
         highlight: glass.highlight,
         elasticity: glass.elasticity,
       },
-      quality: s.quality as AppState["settings"]["quality"],
+      quality,
       clockFormat: s.clockFormat,
     },
     shortcuts,

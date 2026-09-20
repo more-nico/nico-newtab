@@ -17,6 +17,7 @@ export const ARTWORKS: Artwork[] = [
   {
     id: "water-lilies",
     title: "睡莲",
+    shortTitle: "睡莲",
     originalTitle: "Water Lilies",
     artist: "克劳德 · 莫奈",
     year: "1906",
@@ -29,6 +30,7 @@ export const ARTWORKS: Artwork[] = [
   {
     id: "cliff-walk",
     title: "普尔维尔的悬崖漫步",
+    shortTitle: "悬崖漫步",
     originalTitle: "Cliff Walk at Pourville",
     artist: "克劳德 · 莫奈",
     year: "1882",
@@ -41,6 +43,7 @@ export const ARTWORKS: Artwork[] = [
   {
     id: "rainy-paris",
     title: "巴黎街道，雨天",
+    shortTitle: "巴黎街道",
     originalTitle: "Paris Street; Rainy Day",
     artist: "古斯塔夫 · 卡耶博特",
     year: "1877",
@@ -64,7 +67,7 @@ export function defaultState(): AppState {
       brightness: 85,
       blur: 0,
       glass: { ...DEFAULT_GLASS_SETTINGS },
-      quality: "medium",
+      quality: "high",
       clockFormat: "24",
     },
     shortcuts: [],

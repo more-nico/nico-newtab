@@ -82,7 +82,7 @@ for (const channel of channels) {
     await expect(page.locator(".wallpaper")).toHaveClass(/is-loaded/);
     await expect(page.locator(".search-input")).toHaveAttribute(
       "data-ngs-quality",
-      "medium",
+      "high",
     );
     await expect(page.locator(".search-input .ngs-effect")).toHaveCSS(
       "backdrop-filter",
@@ -110,7 +110,7 @@ for (const channel of channels) {
       for (const input of await page
         .locator(".shortcut-form .ngs-input")
         .all()) {
-        await expect(input).toHaveAttribute("data-ngs-quality", "medium");
+        await expect(input).toHaveAttribute("data-ngs-quality", "high");
         await expect(input.locator(".ngs-effect")).toHaveCSS(
           "backdrop-filter",
           /url/,
@@ -175,21 +175,25 @@ for (const channel of channels) {
     await context.setOffline(true);
     await page.getByRole("button", { name: /画作集/ }).click();
     const dialog = page.getByRole("dialog");
-    await expect(page.locator(".ngs-modal-panel")).toHaveAttribute(
+    await expect(page.locator(".dialog-body")).toHaveAttribute(
       "data-ngs-quality",
-      "medium",
+      "high",
     );
-    await expect(page.getByRole("tab", { name: "壁纸" })).toHaveAttribute(
+    await expect(page.locator(".settings-tabs")).toHaveAttribute(
       "data-ngs-quality",
-      "medium",
+      "high",
     );
-    await expect(page.locator(".artwork-option").first()).toHaveAttribute(
+    await expect(page.locator(".wallpaper-picker")).toHaveAttribute(
       "data-ngs-quality",
-      "medium",
+      "high",
     );
     expect(await dialog.locator('[data-ngs-quality="low"]').count()).toBe(0);
-    for (const title of ["普尔维尔的悬崖漫步", "巴黎街道，雨天", "睡莲"]) {
-      await page.getByRole("button", { name: new RegExp(title) }).click();
+    for (const [label, title] of [
+      ["悬崖漫步", "普尔维尔的悬崖漫步"],
+      ["巴黎街道", "巴黎街道，雨天"],
+      ["睡莲", "睡莲"],
+    ]) {
+      await page.getByRole("radio", { name: label, exact: true }).click();
       await expect(page.locator(".wallpaper")).toHaveClass(/is-loaded/);
       await expect(other.locator(".art-credit")).toContainText(title);
     }
@@ -205,10 +209,10 @@ for (const channel of channels) {
       "70% 50%",
     );
     await page.getByRole("slider", { name: "水平位置" }).fill("50");
-    await page.getByRole("tab", { name: "外观", exact: true }).click();
+    await page.getByRole("radio", { name: "外观", exact: true }).click();
     await expect(
       page.locator(".range-setting .ngs-slider").first(),
-    ).toHaveAttribute("data-ngs-quality", "medium");
+    ).toHaveAttribute("data-ngs-quality", "high");
     await page.getByRole("slider", { name: "壁纸亮度" }).fill("90");
     await page.getByRole("slider", { name: "壁纸模糊" }).fill("3");
     await expect(other.locator(".wallpaper")).toHaveCSS(
@@ -272,14 +276,14 @@ for (const channel of channels) {
       );
     await other.keyboard.press("Escape");
     await page.getByText("轻盈", { exact: true }).click({ force: true });
-    await expect(page.locator(".ngs-modal-panel")).toHaveAttribute(
+    await expect(page.locator(".dialog-body")).toHaveAttribute(
       "data-ngs-quality",
       "low",
     );
     await expect
       .poll(() =>
         page
-          .locator(".ngs-modal-panel > .ngs-motion > .ngs-effect")
+          .locator(".dialog-body > .ngs-motion > .ngs-effect")
           .evaluate((element) => getComputedStyle(element).backdropFilter),
       )
       .toMatch(/blur\(7px\).*saturate\((135%|1\.35)\).*brightness\(0\.9\)/);
@@ -309,7 +313,7 @@ for (const channel of channels) {
     await page.getByText("12 小时", { exact: true }).click({ force: true });
     await expect(other.locator(".day-period")).toBeVisible();
     await page.getByText("细腻", { exact: true }).click({ force: true });
-    await expect(page.locator(".ngs-modal-panel")).toHaveAttribute(
+    await expect(page.locator(".dialog-body")).toHaveAttribute(
       "data-ngs-quality",
       "high",
     );
@@ -321,10 +325,12 @@ for (const channel of channels) {
     await page.getByRole("slider", { name: "壁纸模糊" }).fill("0");
     await page.getByRole("slider", { name: "壁纸亮度" }).fill("85");
     await page.getByText("24 小时", { exact: true }).click({ force: true });
-    await page.getByText("均衡", { exact: true }).click({ force: true });
-    await expect(page.locator(".ngs-modal-panel")).toHaveAttribute(
+    // Only two tiers remain: the retired "均衡" must not be offered.
+    await expect(page.getByText("均衡", { exact: true })).toHaveCount(0);
+    await page.getByText("细腻", { exact: true }).click({ force: true });
+    await expect(page.locator(".dialog-body")).toHaveAttribute(
       "data-ngs-quality",
-      "medium",
+      "high",
     );
     await page.screenshot({
       path: `test-results/${channel}-appearance-1366.png`,
@@ -339,7 +345,7 @@ for (const channel of channels) {
       path: `test-results/${channel}-appearance-390.png`,
     });
     await page.setViewportSize({ width: 1366, height: 768 });
-    await page.getByRole("tab", { name: "壁纸", exact: true }).click();
+    await page.getByRole("radio", { name: "壁纸", exact: true }).click();
     await page.screenshot({
       path: `test-results/${channel}-settings-1366.png`,
     });
@@ -384,7 +390,7 @@ for (const channel of channels) {
     });
     await expect(page.getByRole("alert")).toContainText("无法解码");
     await expect(other.locator(".art-credit")).toContainText("我的风景");
-    await page.getByRole("tab", { name: "备份", exact: true }).click();
+    await page.getByRole("radio", { name: "备份", exact: true }).click();
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "导出", exact: true }).click();
     const backupPath = `test-results/${channel}-backup.json`;
@@ -464,7 +470,7 @@ for (const channel of channels) {
       "low",
     );
     await page.getByRole("button", { name: /个性化/ }).click();
-    await expect(page.locator(".ngs-modal-panel")).toHaveAttribute(
+    await expect(page.locator(".dialog-body")).toHaveAttribute(
       "data-ngs-quality",
       "low",
     );
@@ -475,7 +481,7 @@ for (const channel of channels) {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await expect(page.locator(".search-input")).toHaveAttribute(
       "data-ngs-quality",
-      "medium",
+      "high",
     );
 
     stage = "persistence after browser restart";

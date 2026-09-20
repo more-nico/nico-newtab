@@ -10,7 +10,6 @@ import {
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
-  Check,
   CheckCheck,
   ImagePlus,
   Images,
@@ -59,7 +58,7 @@ export function Settings({
   const [pendingBackup, setPendingBackup] = useState<BackupV1 | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
-  const { light } = useGlassMaterial();
+  const { base } = useGlassMaterial();
   async function run(action: () => Promise<void>, success = "") {
     setBusy(true);
     setError("");
@@ -90,56 +89,64 @@ export function Settings({
   const art = ARTWORKS.find((a) => a.id === settings.wallpaper);
   return (
     <Modal
-      title="让这里，更像你"
+      label="设置"
       wide
       onClose={() => {
         if (!busy) onClose();
       }}
-    >
-      <p className="settings-intro">一点留白，一幅好画，一个属于你的开始。</p>
-      <div className="settings-tabs" role="tablist" aria-label="设置分类">
-        {(
-          [
-            { id: "wallpaper", label: "壁纸", icon: Images },
-            { id: "appearance", label: "外观", icon: Palette },
-            { id: "data", label: "备份", icon: SlidersHorizontal },
-          ] as const
-        ).map(({ id, label, icon: Icon }) => (
-          <GlassSurface
-            as="button"
-            type="button"
-            key={id}
-            id={`tab-${id}`}
-            role="tab"
-            aria-selected={tab === id}
-            aria-controls={`panel-${id}`}
-            tabIndex={tab === id ? 0 : -1}
+      head={
+        <GlassSegmentedControl
+          className="settings-tabs"
+          size="sm"
+          cornerRadius={20}
+          aria-label="设置分类"
+          value={tab}
+          onChange={(key) => setTab(key as SettingsTab)}
+          onKeyDown={(e) => {
+            const ids: SettingsTab[] = ["wallpaper", "appearance", "data"];
+            if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+            e.preventDefault();
+            const next =
+              ids[
+                (ids.indexOf(tab) + (e.key === "ArrowRight" ? 1 : ids.length - 1)) %
+                  ids.length
+              ];
+            setTab(next);
+            e.currentTarget
+              .querySelectorAll<HTMLElement>(".ngs-segment")
+              [ids.indexOf(next)]?.focus();
+          }}
+          items={[
+            { key: "wallpaper", label: "壁纸", icon: <Images size={15} /> },
+            { key: "appearance", label: "外观", icon: <Palette size={15} /> },
+            { key: "data", label: "备份", icon: <SlidersHorizontal size={15} /> },
+          ]}
+          {...base}
+        />
+      }
+      foot={
+        <>
+          <span className="settings-status">
+            {busy || saving ? (
+              <LoaderCircle size={13} className="spinning" />
+            ) : (
+              <CheckCheck size={14} />
+            )}
+            {busy ? "正在处理…" : saving ? "正在保存…" : "更改自动保存在此浏览器"}
+          </span>
+          <GlassButton
+            size="sm"
+            className="text-glass-button"
             disabled={busy}
-            onKeyDown={(e) => {
-              const ids: SettingsTab[] = ["wallpaper", "appearance", "data"];
-              if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-                e.preventDefault();
-                const next =
-                  ids[(ids.indexOf(id) + (e.key === "ArrowRight" ? 1 : 2)) % 3];
-                setTab(next);
-                document.getElementById(`tab-${next}`)?.focus();
-              }
-            }}
-            onClick={() => setTab(id)}
-            cornerRadius={12}
-            {...light}
+            onClick={onClose}
+            {...base}
           >
-            <Icon size={16} />
-            {label}
-          </GlassSurface>
-        ))}
-      </div>
-      <div
-        className="settings-content"
-        id={`panel-${tab}`}
-        role="tabpanel"
-        aria-labelledby={`tab-${tab}`}
-      >
+            完成
+          </GlassButton>
+        </>
+      }
+    >
+      <div className="settings-content" id={`panel-${tab}`}>
         <GlassLightGroup>
           <fieldset disabled={busy}>
             {tab === "wallpaper" && (
@@ -148,82 +155,87 @@ export function Settings({
                   <h3>把艺术，留在日常</h3>
                   <span>馆藏 · 公有领域</span>
                 </div>
-                <div className="artwork-grid">
-                  {ARTWORKS.map((a) => (
-                    <GlassSurface
-                      as="button"
-                      type="button"
-                      className={`artwork-option ${settings.wallpaper === a.id ? "selected" : ""}`}
-                      key={a.id}
-                      onClick={() => select(a.id)}
-                      aria-pressed={settings.wallpaper === a.id}
-                      cornerRadius={14}
-                      {...light}
-                    >
-                      <span className="artwork-thumbnail">
-                        <img src={a.thumbnail} alt="" />
-                        {settings.wallpaper === a.id && (
-                          <span className="selection-check">
-                            <Check size={13} />
-                          </span>
-                        )}
-                      </span>
-                      <strong>{a.title}</strong>
-                      <small>
-                        {a.artist
+                <GlassSegmentedControl
+                  className="wallpaper-picker"
+                  cornerRadius={20}
+                  aria-label="选择壁纸"
+                  value={settings.wallpaper}
+                  onChange={select}
+                  items={[
+                    ...ARTWORKS.map((a) => ({
+                      key: a.id,
+                      label: (
+                        <span className="wallpaper-slot-label">
+                          {a.shortTitle}
+                        </span>
+                      ),
+                      icon: (
+                        <img
+                          className="wallpaper-thumb"
+                          src={a.thumbnail}
+                          alt=""
+                        />
+                      ),
+                    })),
+                    ...(settings.customWallpaper
+                      ? [
+                          {
+                            key: "custom",
+                            label: (
+                              <span className="wallpaper-slot-label">
+                                我的图片
+                              </span>
+                            ),
+                            icon: customUrl ? (
+                              <img
+                                className="wallpaper-thumb"
+                                src={customUrl}
+                                alt=""
+                              />
+                            ) : (
+                              <span className="wallpaper-thumb wallpaper-thumb-empty" />
+                            ),
+                          },
+                        ]
+                      : []),
+                  ]}
+                  {...base}
+                />
+                <p className="setting-hint">
+                  {art ? (
+                    <>
+                      <span>
+                        {art.title} ·{" "}
+                        {art.artist
                           .replace("克劳德 · ", "")
                           .replace("古斯塔夫 · ", "")}{" "}
-                        · {a.year}
-                      </small>
-                    </GlassSurface>
-                  ))}
-                </div>
-                <GlassSurface
-                  className="upload-row"
-                  cornerRadius={13}
-                  {...light}
-                >
-                  <div className="upload-preview">
-                    {customUrl ? (
-                      <img src={customUrl} alt="自定义壁纸预览" />
-                    ) : (
-                      <ImagePlus size={23} strokeWidth={1.4} />
-                    )}
-                  </div>
-                  <div className="upload-copy">
-                    <strong>自己的风景</strong>
-                    <span>
-                      {settings.customWallpaper
-                        ? settings.customWallpaper.name
-                        : "JPG、PNG 或 WebP，最大 20 MB"}
-                    </span>
-                  </div>
-                  {settings.customWallpaper && (
-                    <GlassButton
-                      size="sm"
-                      className="text-glass-button"
-                      onClick={() => select("custom")}
-                      aria-pressed={settings.wallpaper === "custom"}
-                      {...light}
-                    >
-                      {settings.wallpaper === "custom" ? (
-                        <>
-                          <Check size={14} />
-                          使用中
-                        </>
-                      ) : (
-                        "使用"
-                      )}
-                    </GlassButton>
+                        · {art.year}
+                      </span>
+                      <a href={art.source} target="_blank" rel="noreferrer">
+                        查看馆藏 ↗
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <span>{settings.customWallpaper?.name}</span>
+                      <span>仅保存在当前浏览器</span>
+                    </>
                   )}
+                </p>
+                <div className="setting-row">
+                  <div>
+                    <label>我的图片</label>
+                    <p>JPG、PNG 或 WebP，最大 20 MB</p>
+                  </div>
                   <GlassButton
                     size="sm"
+                    icon={<ImagePlus size={14} strokeWidth={1.6} />}
                     onClick={() => uploadRef.current?.click()}
-                    {...light}
+                    {...base}
                   >
                     {settings.customWallpaper ? "替换图片" : "上传图片"}
                   </GlassButton>
-                </GlassSurface>
+                </div>
                 <input
                   ref={uploadRef}
                   type="file"
@@ -253,37 +265,32 @@ export function Settings({
                       { key: "cover", label: "铺满" },
                       { key: "contain", label: "完整" },
                     ]}
-                    {...light}
+                    {...base}
                   />
                 </div>
-                <Range
-                  label="水平位置"
-                  value={settings.positionX}
-                  min={0}
-                  max={100}
-                  unit="%"
-                  onChange={(positionX) => change({ positionX })}
-                />
-                <Range
-                  label="垂直位置"
-                  value={settings.positionY}
-                  min={0}
-                  max={100}
-                  unit="%"
-                  onChange={(positionY) => change({ positionY })}
-                />
+                <div className="field-grid">
+                  <Range
+                    label="水平位置"
+                    value={settings.positionX}
+                    min={0}
+                    max={100}
+                    unit="%"
+                    onChange={(positionX) => change({ positionX })}
+                  />
+                  <Range
+                    label="垂直位置"
+                    value={settings.positionY}
+                    min={0}
+                    max={100}
+                    unit="%"
+                    onChange={(positionY) => change({ positionY })}
+                  />
+                </div>
                 <p className="artwork-source">
                   <Info size={13} />
-                  {art ? (
-                    <>
-                      <span>{art.museum} · 公有领域图像</span>
-                      <a href={art.source} target="_blank" rel="noreferrer">
-                        查看馆藏 ↗
-                      </a>
-                    </>
-                  ) : (
-                    "你的图片仅保存在当前浏览器。"
-                  )}
+                  {art
+                    ? `${art.museum} · 公有领域图像`
+                    : "你的图片仅保存在当前浏览器。"}
                 </p>
               </>
             )}
@@ -293,22 +300,24 @@ export function Settings({
                   <h3>找到舒服的光与影</h3>
                   <span>实时预览</span>
                 </div>
-                <Range
-                  label="壁纸亮度"
-                  value={settings.brightness}
-                  min={35}
-                  max={120}
-                  unit="%"
-                  onChange={(brightness) => change({ brightness })}
-                />
-                <Range
-                  label="壁纸模糊"
-                  value={settings.blur}
-                  min={0}
-                  max={20}
-                  unit="px"
-                  onChange={(blur) => change({ blur })}
-                />
+                <div className="field-grid">
+                  <Range
+                    label="壁纸亮度"
+                    value={settings.brightness}
+                    min={35}
+                    max={120}
+                    unit="%"
+                    onChange={(brightness) => change({ brightness })}
+                  />
+                  <Range
+                    label="壁纸模糊"
+                    value={settings.blur}
+                    min={0}
+                    max={20}
+                    unit="px"
+                    onChange={(blur) => change({ blur })}
+                  />
+                </div>
                 <div className="optics-heading">
                   <div>
                     <h3>玻璃光学参数</h3>
@@ -327,12 +336,12 @@ export function Settings({
                     onClick={() =>
                       change({ glass: { ...DEFAULT_GLASS_SETTINGS } })
                     }
-                    {...light}
+                    {...base}
                   >
                     恢复 Playground 默认值
                   </GlassButton>
                 </div>
-                <div className="optics-group">
+                <div className="field-grid">
                   <Range
                     label="模糊 Blur"
                     value={settings.glass.blur}
@@ -374,7 +383,7 @@ export function Settings({
                   <span>折射</span>
                   <small>贴图精度越高，边缘越清晰，也会增加渲染开销</small>
                 </div>
-                <div className="optics-group">
+                <div className="field-grid">
                   <Range
                     label="折射带 Depth"
                     value={settings.glass.depth}
@@ -407,7 +416,7 @@ export function Settings({
                   <span>交互</span>
                   <small>色散和弹性仅在“细腻”玻璃档位生效</small>
                 </div>
-                <div className="optics-group">
+                <div className="field-grid">
                   <Range
                     label="高光 Highlight"
                     value={settings.glass.highlight}
@@ -430,7 +439,7 @@ export function Settings({
                 <div className="setting-row">
                   <div>
                     <label>玻璃质感</label>
-                    <p>均衡保留折射，细腻增加光影与弹性</p>
+                    <p>轻盈只保留模糊与折射，细腻额外开启色散与弹性</p>
                   </div>
                   <GlassSegmentedControl
                     size="sm"
@@ -441,10 +450,9 @@ export function Settings({
                     }
                     items={[
                       { key: "low", label: "轻盈" },
-                      { key: "medium", label: "均衡" },
                       { key: "high", label: "细腻" },
                     ]}
-                    {...light}
+                    {...base}
                   />
                 </div>
                 <div className="setting-row">
@@ -465,13 +473,13 @@ export function Settings({
                       { key: "24", label: "24 小时" },
                       { key: "12", label: "12 小时" },
                     ]}
-                    {...light}
+                    {...base}
                   />
                 </div>
                 <GlassSurface
                   className="settings-note"
                   cornerRadius={10}
-                  {...light}
+                  {...base}
                 >
                   玻璃效果会根据浏览器能力自动适配。系统开启“减少动态效果”时，页面会减少动画。
                 </GlassSurface>
@@ -486,7 +494,7 @@ export function Settings({
                 <GlassSurface
                   className="backup-card"
                   cornerRadius={16}
-                  {...light}
+                  {...base}
                 >
                   <span className="backup-icon">
                     <ArrowDownToLine size={23} />
@@ -498,7 +506,7 @@ export function Settings({
                   <GlassButton
                     size="sm"
                     onClick={() => void run(onExport, "备份文件已导出。")}
-                    {...light}
+                    {...base}
                   >
                     导出
                   </GlassButton>
@@ -506,7 +514,7 @@ export function Settings({
                 <GlassSurface
                   className="backup-card"
                   cornerRadius={16}
-                  {...light}
+                  {...base}
                 >
                   <span className="backup-icon">
                     <ArrowUpFromLine size={23} />
@@ -518,7 +526,7 @@ export function Settings({
                   <GlassButton
                     size="sm"
                     onClick={() => importRef.current?.click()}
-                    {...light}
+                    {...base}
                   >
                     导入
                   </GlassButton>
@@ -546,7 +554,7 @@ export function Settings({
                     role="region"
                     aria-label="确认恢复备份"
                     cornerRadius={12}
-                    {...light}
+                    {...base}
                   >
                     <strong>用这份备份替换当前内容？</strong>
                     <p>
@@ -562,7 +570,7 @@ export function Settings({
                         size="sm"
                         className="text-glass-button"
                         onClick={() => setPendingBackup(null)}
-                        {...light}
+                        {...base}
                       >
                         取消
                       </GlassButton>
@@ -574,7 +582,7 @@ export function Settings({
                             setPendingBackup(null);
                           }, "备份已恢复。")
                         }
-                        {...light}
+                        {...base}
                       >
                         确认替换并恢复
                       </GlassButton>
@@ -584,7 +592,7 @@ export function Settings({
                 <GlassSurface
                   className="settings-note"
                   cornerRadius={10}
-                  {...light}
+                  {...base}
                 >
                   无需账号，不收集使用数据。卸载扩展会清除本地内容，请提前备份。
                 </GlassSurface>
@@ -608,7 +616,7 @@ export function Settings({
             className="inline-feedback"
             tone="danger"
             role="alert"
-            {...light}
+            {...base}
           >
             {error}
           </GlassAlert>
@@ -618,30 +626,11 @@ export function Settings({
             className="inline-feedback"
             tone="success"
             role="status"
-            {...light}
+            {...base}
           >
             {notice}
           </GlassAlert>
         )}
-      </div>
-      <div className="settings-bottom">
-        <span>
-          {busy || saving ? (
-            <LoaderCircle size={13} className="spinning" />
-          ) : (
-            <CheckCheck size={14} />
-          )}
-          {busy ? "正在处理…" : saving ? "正在保存…" : "更改自动保存在此浏览器"}
-        </span>
-        <GlassButton
-          size="sm"
-          className="text-glass-button"
-          disabled={busy}
-          onClick={onClose}
-          {...light}
-        >
-          完成
-        </GlassButton>
       </div>
     </Modal>
   );
@@ -666,7 +655,7 @@ function Range({
   format?: (value: number) => string;
   onChange: (value: number) => void;
 }) {
-  const { light } = useGlassMaterial();
+  const { base } = useGlassMaterial();
   return (
     <div className="range-setting">
       <div>
@@ -677,13 +666,14 @@ function Range({
         </output>
       </div>
       <GlassSlider
+        size="sm"
         aria-label={label}
         value={value}
         min={min}
         max={max}
         step={step}
         onChange={onChange}
-        {...light}
+        {...base}
       />
     </div>
   );

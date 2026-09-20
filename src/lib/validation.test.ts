@@ -110,6 +110,17 @@ describe("backup validation", () => {
     delete (data.settings as Partial<typeof data.settings>).glass;
     expect(parseState(data).settings.glass).toEqual(DEFAULT_GLASS_SETTINGS);
   });
+  it("folds the retired medium tier into high and rejects unknown tiers", () => {
+    const data = defaultState();
+    const tier = (value: string) => {
+      Object.assign(data.settings, { quality: value });
+      return parseState(data).settings.quality;
+    };
+    expect(tier("medium")).toBe("high");
+    expect(tier("high")).toBe("high");
+    expect(tier("low")).toBe("low");
+    expect(() => tier("ultra")).toThrow();
+  });
   it.each([
     ["blur", 65],
     ["saturation", -1],

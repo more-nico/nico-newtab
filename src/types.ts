@@ -1,4 +1,4 @@
-export type Quality = "low" | "medium" | "high";
+export type Quality = "low" | "high";
 export interface CustomWallpaper {
   assetId: string;
   name: string;
@@ -43,6 +43,8 @@ export interface AppState {
 export interface Artwork {
   id: string;
   title: string;
+  /** Compact label for the wallpaper picker segments. */
+  shortTitle: string;
   originalTitle: string;
   artist: string;
   year: string;

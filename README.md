@@ -1,79 +1,179 @@
+<div align="center">
+
 # Nico · 印象新标签页
 
-一个使用印象派画作与轻盈玻璃质感的 Chrome / Edge 新标签页。以 `nico-glass-kit@0.3.0` 为界面基础，所有个人数据保存在本地。
+**在印象派画作与轻盈玻璃之间，开始新的浏览。**
+
+[Chrome / Edge 120+](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3) · [nico-glass-kit](https://github.com/more-nico/nico-glass-kit) · 本地优先 · MV3
+
+</div>
+
+<p align="center">
+  <img src="assets/hero.gif" width="760" alt="Nico 新标签页中，指针经过玻璃控件时产生折射与边缘高光" />
+</p>
+
+---
+
+## 目录
+
+- [这是什么](#这是什么)
+- [亮点](#亮点)
+- [安装](#安装)
+- [使用](#使用)
+- [玻璃材质](#玻璃材质)
+- [动态图演示](#动态图演示)
+- [开发](#开发)
+- [测试策略](#测试策略)
+- [数据、权限与限制](#数据权限与限制)
+- [项目结构](#项目结构)
+- [素材与许可](#素材与许可)
+
+## 这是什么
+
+Nico 是一个 Chrome / Edge 新标签页扩展：用时间、搜索和常用网站承接下一次浏览，用莫奈画作和可交互的玻璃材质让空白页保留一点风景。
+
+它是一个本地优先的 MV3 扩展。设置、快捷网站和上传的壁纸都留在浏览器本地，没有账号、后台服务、遥测或云端同步。
+
+## 亮点
+
+- **整页响应式布局。** 以动态视口高度组织页头、时钟、搜索、快捷网站和页脚；常见桌面尺寸尽量一屏显示，内容过多时自然滚动。
+- **真正的玻璃材质。** 首页和弹窗基于 [`nico-glass-kit`](https://github.com/more-nico/nico-glass-kit)，支持折射、边缘高光、指针弹性和自动明暗判断。
+- **可降级的渲染档位。** “细腻”档启用折射、色散和弹性；“轻盈”档回退到普通 CSS 背景链。浏览器能力不足或系统减少动态效果时会自动降级。
+- **搜索留在原位。** 支持浏览器默认引擎、Google、Bing、百度、DuckDuckGo 和自定义引擎；搜索结果在新标签页打开，当前新标签页不被替换。
+- **本地壁纸与备份。** 三幅内置画作可离线显示；上传图片会在本地压缩为 WebP；设置页可导出和导入完整 JSON 备份。
+- **快捷网站可整理。** 支持拖拽排序、编辑、删除、网站图标、右键编辑，以及从浏览器工具栏直接添加当前网站。
 
 ## 安装
 
-需要桌面版 Chrome / Edge 120 或更高版本，推荐使用当前稳定版。
+需要桌面版 Chrome / Edge 120 或更高版本。
 
-1. 下载并解压 `release/nico-newtab-1.0.0.zip`，或直接使用本项目构建好的 `dist` 文件夹。
-2. Chrome 打开 `chrome://extensions`；Edge 打开 `edge://extensions`。
-3. 打开「开发者模式」，点击「加载已解压的扩展程序」。
-4. 选择包含 `manifest.json` 的文件夹（项目的 `dist`，或 ZIP 解压后的根目录）。
-5. 新建标签页；若浏览器提示确认新标签页变更，选择保留。已有其他新标签页扩展时，需要禁用其中一个。
+1. 下载并解压 `release/nico-newtab-1.0.0.zip`，或使用构建后的 `dist/` 文件夹。
+2. 打开 `chrome://extensions` 或 `edge://extensions`。
+3. 开启“开发者模式”，点击“加载已解压的扩展程序”。
+4. 选择包含 `manifest.json` 的 `dist/` 文件夹。
+5. 新建标签页并确认使用 Nico；已有其他新标签页扩展时，需要停用其中一个。
 
-请保留加载的文件夹。更新后在扩展管理页点击「重新加载」，然后重新打开新标签页。保持目录不变可保留扩展标识与已有数据。隐私/无痕窗口不支持新标签页替换。
+更新扩展后，在扩展管理页点击“重新加载”，再打开新的标签页。请保持已加载的文件夹路径不变，这样可以保留扩展标识和本地数据。
 
 ## 使用
 
-- **搜索**：搜索栏左侧的下拉框可以切换搜索引擎——默认（浏览器自身设置的引擎）、Google、Bing、百度、DuckDuckGo，或你在设置里添加的自定义引擎。下拉项与当前引擎都用各家的官方标识。输入关键词后回车，**结果在新标签页打开**，新标签页本身留在原地。
-- **搜索建议**：选中 Google、Bing、百度或 DuckDuckGo 后，输入两个字以上会显示联想词，↑/↓ 选择、回车搜索、Esc 关闭。默认引擎与自定义引擎不提供联想。联想失败或离线时列表自动隐藏，不影响正常搜索。
-- **添加当前网站**：点浏览器工具栏上的 Nico 图标，弹出的小面板会带上当前标签页的图标、标题和域名，改好名字点「添加」即可。只能用扩展图标打开——新标签页自己看不到别的标签页地址。（扩展页面、`chrome://` 和本地文件没有可访问网址，面板会说明原因。）
-- **网站**：点击「添加网站」，填写名称和 HTTP/HTTPS 地址。点击瓷贴**在新标签页打开**，新标签页本身留在原地。拖拽可排序；「整理」、图标上的省略号或右键可编辑、删除；编辑面板也提供前后移动按钮。可以给网站上传自定义图标（JPG/PNG/WebP，最大 5 MB；本地裁成方形并压成 128 像素的 WebP，随备份一起导出），留空则使用网站自身的图标。所有输入框右侧都有清除按钮。
-- **壁纸**：右上角「画作集」用一条带缩略图的玻璃分段挑选三幅内置画作；上传 JPG、PNG、WebP（最大 20 MB）后会出现「我的图片」分段，可以直接切换。上传图片在本地转换为长边不超过 2560 像素的 WebP。保留一张上传图片，成功上传新图片后才替换旧图片。
-- **外观**：右下角「设置」打开设置弹窗；「外观」页集中所有视觉设置——壁纸区用「画作集」同款分段挑选壁纸、上传图片，设置铺满/完整显示、位置和壁纸亮度/模糊；玻璃区先选**玻璃明暗（自动 / 浅色 / 深色）**和玻璃档位，再精调玻璃的 Blur、Saturation、Brightness、Map scale、Depth、Curvature、Dispersion、Highlight、Elasticity（支持恢复 Playground 默认值）。这些参数会实时作用于首页、设置弹窗、网站编辑和其中的输入框、滑杆及按钮。设置弹窗与网站编辑使用和首页同一套透明玻璃：窗口本身不带自己的颜色，也不跟随指针弹性；窗口外的所有组件都会弹性响应。
-- **功能**：设置弹窗的「功能」页切换 12/24 小时制，并管理自定义搜索引擎（最多 8 个，名称 20 字以内）。
-  「自动」按壁纸实测亮度决定玻璃与页面文字走浅色还是深色，与 Playground 的 `overLight="auto"` 同一套判断；壁纸偏暗时结果就是现在的深色外观。判断依据是实际绘制在玻璃下方的图层，所以壁纸层必须保持可命中测试（`styles.css` 里有注释说明）。「浅色 / 深色」是手动强制，用于壁纸特别亮或特别暗、自动判断不合意时。
-- **自定义搜索引擎**：填写名称和一个含 `%s` 占位符的 HTTP/HTTPS 地址，例如 `https://www.zhihu.com/search?q=%s`；也接受 `{query}` 写法，保存时统一归一化为 `%s`。自定义引擎只按你填写的地址搜索，不提供联想。移除正在使用的引擎时，搜索栏会回到浏览器默认引擎。
-- **关于**：设置弹窗的「关于」页导出 JSON 备份，包含网站列表、外观设置（含自定义搜索引擎）和上传壁纸。导入会先校验，再显示替换确认。最多支持 200 个网站和 32 MB 的备份文件。
+### 搜索
 
-三幅内置画作及上传图片可离线显示。网站访问和搜索需要网络；搜索建议也需要网络，离线时列表自动隐藏。输入框采用 glass-kit Playground 的原生焦点与输入行为。玻璃折射会按浏览器能力自动降级；系统设置减少动态效果时使用低档玻璃、关闭弹性并简化动画。
+搜索栏左侧可以切换搜索引擎。Google、Bing、百度和 DuckDuckGo 支持联想词：输入两个字符后，用 ↑ / ↓ 选择，回车搜索，Esc 关闭。浏览器默认引擎和自定义引擎不请求联想接口；离线或请求失败时列表自动隐藏。
 
-玻璃参数的范围、步进和初始值均与 `nico-glass-kit@0.3.0` Playground 一致：Blur `3px`、Saturation `100%`、Brightness `1.10`、Map scale `20%`、Depth `8px`、Curvature `0.20`、Dispersion `10%`、Highlight `100%`、Elasticity `0.20`。玻璃档位只有「轻盈」与「细腻」两档，色散和弹性在「细腻」档位生效。旧数据里的「均衡」档会在读取时并入「细腻」。
+### 快捷网站
 
-## 本地开发
+点击“添加网站”填写名称和 HTTP/HTTPS 地址。点击网站会在新标签页打开；“整理”、图标上的省略号或右键可以编辑、删除和调整顺序。可上传 JPG、PNG 或 WebP 图标，图片会在本地裁成方形并压缩到 128 像素。
+
+工具栏上的 Nico 图标可以把当前标签页的标题、网址和图标带入添加面板。扩展页、`chrome://` 页面和本地文件没有可访问的网址，因此不会被添加。
+
+### 壁纸与外观
+
+右上角“画作集”可以切换三幅内置画作；上传 JPG、PNG 或 WebP 后会出现“我的图片”。图片在本地转换为长边不超过 2560 像素的 WebP，旧图片只有在新图片保存成功后才会替换。
+
+右下角“设置”包含：
+
+- 壁纸铺满 / 完整显示、位置、亮度和模糊；
+- 玻璃明暗：自动、浅色、深色；
+- 玻璃档位：轻盈、细腻；
+- Blur、Saturation、Brightness、Map scale、Depth、Curvature、Dispersion、Highlight、Elasticity；
+- 12 / 24 小时制和自定义搜索引擎；
+- JSON 备份导出与导入。
+
+## 玻璃材质
+
+Nico 使用 [`nico-glass-kit`](https://github.com/more-nico/nico-glass-kit) 的共享玻璃表面与 `GlassLightGroup`。`overLight="auto"` 会根据玻璃下方实际绘制的背景判断文字、染色、边缘和阴影的明暗；设置为浅色或深色时可以固定结果。
+
+| 档位 | 行为                                                                              |
+| ---- | --------------------------------------------------------------------------------- |
+| 轻盈 | 普通 CSS `backdrop-filter` 链，关闭高成本折射与弹性；也是减少动态效果时的回退档。 |
+| 细腻 | 启用 SVG 位移折射、色散、指针弹性和悬停高光；不支持完整折射时仍会沿回退链降级。   |
+
+当前默认材质参数与 kit Playground 保持一致：Blur `3px`、Saturation `100%`、Brightness `1.10`、Map scale `20%`、Depth `8px`、Curvature `0.20`、Dispersion `10%`、Highlight `100%`、Elasticity `0.20`。
+
+## 动态图演示
+
+动态图由 `scripts/record-demos.mjs` 使用 Playwright 录制，再由 FFmpeg 转换为 GIF。它们是文档素材，不属于测试烟测。
+
+**首页玻璃交互**：指针经过时钟、搜索栏和快捷入口，观察边缘高光与弹性。
+
+<p align="center">
+  <img src="assets/hero.gif" width="760" alt="首页玻璃交互演示" />
+</p>
+
+**设置面板**：打开设置，在外观、功能和关于页之间切换，再关闭弹窗。
+
+<p align="center">
+  <img src="assets/settings.gif" width="760" alt="设置面板切换演示" />
+</p>
+
+**快捷网站**：多个网站瓷贴的指针反馈和玻璃高光。
+
+<p align="center">
+  <img src="assets/shortcuts.gif" width="760" alt="快捷网站瓷贴交互演示" />
+</p>
+
+重新录制素材：
+
+```powershell
+npm run dev
+npm run record:demos
+```
+
+脚本默认访问 `http://127.0.0.1:4173`，也可以用 `PREVIEW_URL` 指定预览地址。录制需要 Chromium 和 PATH 中可用的 `ffmpeg`。
+
+## 开发
 
 ```powershell
 npm ci
-npm run dev
+npm run dev          # Vite 预览：http://127.0.0.1:4173
+npm run test:quick   # 单元测试 + TypeScript 类型检查
+npm run build        # 构建可加载的 dist/ 扩展
+npm run record:demos # Playwright 录制文档 GIF
+npm run test:full    # 提交或打包前的完整检查
+npm run package      # 构建并生成 release/nico-newtab-1.0.0.zip
 ```
 
-打开终端显示的 `http://127.0.0.1:5173`。网页预览的数据使用独立的 localStorage / IndexedDB，和扩展数据不互通。预览中提交搜索会提示安装扩展，不会真的跳转到搜索结果页；预览也没有扩展的跨源权限，因此不会出现搜索建议。
+预览页面使用独立的 `localStorage` / IndexedDB，与扩展数据不互通。预览中提交搜索只显示提示，不会真正跳转；预览没有扩展的跨源权限，因此不会出现搜索建议。
+
+## 测试策略
+
+日常修改、普通 bug 修复和小功能使用 `npm run test:quick`。UI-only 调整使用最小的专项验证，可以运行 `scripts/inspect-ui.mjs`、`scripts/preview-smoke.mjs` 或一次性 Playwright 脚本。
+
+`scripts/smoke.mjs` 只保留跨浏览器、跨扩展边界且值得长期回归的流程：MV3 加载、CSP、存储同步、输入行为和浏览器重启持久化。一次性的视口矩阵、截图检查和布局探索不放进这里。
+
+提交或打包前运行：
 
 ```powershell
-npm test          # 网址、备份、搜索引擎模板校验与存储一致性
-npm run typecheck # TypeScript
-npm run build     # 构建 dist，可直接加载到浏览器
-npm run package   # 构建并生成 release/nico-newtab-1.0.0.zip
-npm run test:e2e  # 在独立 Chrome / Edge 测试配置中验收
+npm run test:full
 ```
 
-端到端验收使用本机安装的 Chrome / Edge（需要支持 Extensions.loadUnpacked 的近期版本），通过浏览器级调试会话加载扩展，不接触日常使用的用户配置。报告和截图在 `test-results`，隔离测试配置在 `.cache`。没有这两个浏览器时可用 `npx playwright install chromium` 后运行 `node scripts/inspect-ui.mjs` 检查 Chromium 中的扩展界面。
+它会先构建扩展，再在独立的 Chrome / Edge 配置中运行完整烟测。详细约定见被仓库使用的 `AGENTS.md`。
 
-内置优化图片已包含在仓库，构建不需要联网下载画作。仅在需要重新生成素材时执行 `npm run assets`：它从馆方 API 核对作品信息、从 Commons 下载公有领域复制图，并使用 Sharp 生成 WebP、缩略图及扩展图标。
+## 数据、权限与限制
 
-## 数据与权限
-
-- 设置和网站列表：`chrome.storage.local` 中的 `nico.newtab.state.v1`。
-- 上传壁纸：扩展独立 IndexedDB，使用不可变图片标识；新图片写入成功后再提交设置，失败时保留旧数据。
-- 多个标签页：Web Locks 串行处理修改，读取最新状态合并，通过存储事件同步界面。
-- 只请求 `storage`、`search`、`favicon`、`activeTab` 四项权限。`activeTab` 只在点击工具栏图标的那一刻授予当前标签页的临时访问权，关闭面板即失效，平时对任何网站都没有常驻权限；不注入脚本，不读取浏览历史或书签。
-- 为了显示搜索建议，额外声明了四个联想接口域名的 `host_permissions`：`suggestqueries.google.com`、`api.bing.com`、`suggestion.baidu.com`、`duckduckgo.com`。**这会让安装和更新时出现「读取和更改您在以下网站上的数据」的权限提示。**扩展只会向这四个域名发送你正在输入的关键词，用于取回联想词；选中「默认」或自定义引擎时不发起任何联想请求。
-- 没有账号、后台服务、遥测或云端同步，也不请求在线壁纸。除上述联想接口外，只在点击馆藏/许可链接时才访问外部站点。网站图标由浏览器 favicon 接口提供，缺失时显示名称首字。
-- 卸载扩展会删除浏览器内的扩展数据，请事先导出备份。浏览器未完成保存时不要立即关闭页面，设置底部会显示保存状态。
+- 设置和网站列表保存在 `chrome.storage.local` 的 `nico.newtab.state.v1`。
+- 上传壁纸保存在扩展独立 IndexedDB；导出备份时会以内嵌 WebP 数据带出。
+- 只申请 `storage`、`search`、`favicon`、`activeTab` 和 `tabs` 权限，以及四个搜索建议接口的 `host_permissions`。
+- 不读取浏览历史，不注入网页脚本，没有账号、后台服务、遥测或云同步。
+- 搜索建议需要网络；网站图标可能因目标网站不提供 favicon 而退回首字母。
+- 隐私 / 无痕窗口不支持新标签页替换。
+- 卸载扩展会删除本地扩展数据，建议先导出备份。
 
 ## 项目结构
 
 ```text
-src/components/   设置、搜索引擎管理、网站编辑与可访问弹窗
-src/lib/          校验、存储事务、图片处理、搜索引擎与联想、平台适配与单元测试
-src/popup/        工具栏弹窗（添加当前网站）
-src/App.tsx       首页与交互
-src/data.ts       默认设置、画作元数据
-public/           Manifest、图标、画作和授权说明
-scripts/          素材准备、打包、许可生成和浏览器验收
+src/components/   设置、网站编辑、弹窗和搜索引擎管理
+src/lib/           校验、持久化、图片处理、平台适配、玻璃材质
+src/popup/         浏览器工具栏添加网站的小面板
+src/App.tsx        新标签页首页与交互
+public/            MV3 manifest、画作、缩略图、图标和第三方说明
+assets/            README 动态演示 GIF
+scripts/           资源处理、构建打包、预览检查、烟测和 GIF 录制
 ```
 
-类型定义位于 `src/types.ts`，备份使用 `BackupV1` 格式。未知版本和无效字段会被拒绝，避免静默覆盖。无法读取已有设置时会暂停编辑并提供重试。工具栏弹窗复用首页的存储事务、网址校验与玻璃材质，因此两边永远看到同一份数据。
+## 素材与许可
 
-画作与运行时依赖的完整来源及许可证见 [第三方说明](public/THIRD_PARTY_NOTICES.md)。
+三幅内置画作来自芝加哥艺术博物馆公开作品信息和 Wikimedia Commons 公有领域复制图；来源、许可证和处理说明见 [`public/THIRD_PARTY_NOTICES.md`](public/THIRD_PARTY_NOTICES.md)。
+
+`nico-glass-kit` 依赖采用 MIT License；本项目使用的画作与运行时依赖以第三方说明为准。`assets/` 中的 GIF 是用本地页面和本项目内置壁纸录制的演示素材。

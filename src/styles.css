@@ -32,6 +32,7 @@
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
 }
 button,
 input,
@@ -96,7 +97,9 @@ button:disabled {
 }
 .app {
   position: relative;
+  min-height: 100vh;
   min-height: 100svh;
+  min-height: 100dvh;
   isolation: isolate;
   /* Ink for the text painted straight onto the wallpaper — the clock, the
      website names, the footer. The kit's tokens only cover text inside glass,
@@ -159,11 +162,14 @@ button:disabled {
 .page-shell {
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
   min-height: 100svh;
+  min-height: 100dvh;
   padding: 0 48px;
 }
 .page-header {
-  height: 106px;
+  height: clamp(76px, 12dvh, 106px);
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -214,7 +220,7 @@ button:disabled {
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
-  padding-top: clamp(58px, 9vh, 126px);
+  padding-top: clamp(34px, 7dvh, 86px);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -260,7 +266,7 @@ button:disabled {
   margin-top: 10px;
 }
 .search-form {
-  margin-top: 47px;
+  margin-top: clamp(28px, 6dvh, 55px);
   width: min(620px, 100%);
   display: flex;
   align-items: center;
@@ -487,9 +493,11 @@ button:disabled {
   text-shadow: 0 1px 10px #1b2d30aa;
 }
 .shortcuts-section {
-  width: min(620px, 100%);
-  margin-top: 29px;
-  margin-bottom: 40px;
+  /* Seven compact slots (six saved sites plus Add) stay on one desktop row.
+     The search field remains narrower, preserving a clear visual hierarchy. */
+  width: min(700px, 100%);
+  margin-top: clamp(18px, 3.8dvh, 35px);
+  margin-bottom: clamp(16px, 3dvh, 32px);
 }
 .shortcut-toolbar {
   display: flex;
@@ -637,8 +645,9 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 22px 0 29px;
-  min-height: 100px;
+  padding: clamp(12px, 2.4dvh, 22px) 0 clamp(16px, 3dvh, 29px);
+  min-height: clamp(76px, 12dvh, 100px);
+  flex: none;
 }
 .art-credit {
   display: flex;
@@ -1513,13 +1522,87 @@ button:disabled {
 }
 @media (min-height: 1000px) {
   .main-content {
-    padding-top: 5vh;
+    padding-top: 5dvh;
   }
   .search-form {
     margin-top: 55px;
   }
   .shortcuts-section {
     margin-top: 35px;
+  }
+}
+/* A short desktop window needs a coordinated density change. Keeping this
+   height rule separate from the phone breakpoint prevents a wide 800x600
+   window from inheriting a narrow layout, while every vertical measure comes
+   down together instead of making one disproportionately tiny control. */
+@media (max-height: 700px) and (min-width: 601px) {
+  .page-header {
+    height: 70px;
+  }
+  .brand-wordmark {
+    font-size: 33px;
+  }
+  .main-content {
+    padding-top: 14px;
+  }
+  .greeting {
+    margin-bottom: 4px;
+  }
+  .date {
+    margin-top: 6px;
+  }
+  .search-form {
+    margin-top: 18px;
+  }
+  .search-input .ngs-input-inner,
+  .search-engine .ngs-select-trigger-inner {
+    height: 50px;
+    min-height: 50px;
+  }
+  .shortcuts-section {
+    width: min(700px, 100%);
+    margin-top: 14px;
+    margin-bottom: 12px;
+  }
+  .shortcut-toolbar {
+    padding-bottom: 8px;
+  }
+  .shortcut-grid {
+    gap: 12px 8px;
+  }
+  .shortcut-item {
+    width: 72px;
+  }
+  .shortcut-link {
+    gap: 8px;
+  }
+  .shortcut-glass {
+    width: 54px;
+    height: 54px;
+  }
+  .site-icon {
+    width: 26px;
+    height: 26px;
+  }
+  .site-letter {
+    font-size: 22px;
+  }
+  .empty-hint {
+    margin-top: 12px;
+  }
+  .page-footer {
+    min-height: 64px;
+    padding: 8px 0 10px;
+  }
+  .credit-icon {
+    width: 30px;
+    height: 34px;
+  }
+  .art-credit small {
+    margin-top: 3px;
+  }
+  .settings-button .ngs-btn-inner {
+    padding: 9px 14px !important;
   }
 }
 @media (max-width: 900px) {
@@ -1535,8 +1618,10 @@ button:disabled {
   .footer-note {
     display: none;
   }
+}
+@media (max-width: 900px) and (min-height: 701px) {
   .main-content {
-    padding-top: 11vh;
+    padding-top: clamp(34px, 8dvh, 74px);
   }
 }
 @media (max-width: 600px) {
@@ -1550,7 +1635,7 @@ button:disabled {
     font-size: 33px;
   }
   .main-content {
-    padding-top: 10vh;
+    padding-top: clamp(34px, 7dvh, 66px);
   }
   .greeting {
     font-size: 10px;

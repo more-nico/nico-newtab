@@ -65,7 +65,7 @@ const SUGGEST_DEBOUNCE_MS = 200;
  * Sized from both axes: a 768px-tall window has almost no vertical slack once
  * the search bar and the tiles are in, so width alone would overflow it.
  */
-const CLOCK_SIZE = "clamp(80px, min(12.5vw, 20vh), 200px)";
+const CLOCK_SIZE = "clamp(80px, min(12.5vw, 18dvh), 200px)";
 const CLOCK_FONT = '"Palatino Linotype", serif';
 
 function useReducedMotion() {

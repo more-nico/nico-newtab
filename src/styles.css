@@ -997,6 +997,20 @@ button:disabled {
   color: var(--ngs-text-dim);
   letter-spacing: 0.4px;
 }
+/* 光影 continues the 外观 tab after the wallpaper block, so it needs the same
+   divider rhythm as the optics sections below it. */
+.artwork-source + .section-heading {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+}
+/* Adjacent slider groups without a heading between them (位置 ↔ 亮度/模糊 in
+   the wallpaper block) still read as separate sections. */
+.field-grid + .field-grid {
+  margin-top: 23px;
+  padding-top: 18px;
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
 /* Wallpaper picker: a rounded-rect glass panel carrying one thumbnail per
    choice (cornerRadius is set on the component, not here). */
 .wallpaper-picker {

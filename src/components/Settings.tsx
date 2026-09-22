@@ -30,7 +30,7 @@ import { Modal } from "./Modal";
 import { SearchEngineSettings } from "./SearchEngineSettings";
 import { useGlassMaterial } from "../lib/glass";
 
-export type SettingsTab = "wallpaper" | "appearance" | "data";
+export type SettingsTab = "appearance" | "features" | "about";
 export function Settings({
   settings,
   customUrl,
@@ -104,7 +104,7 @@ export function Settings({
           value={tab}
           onChange={(key) => setTab(key as SettingsTab)}
           onKeyDown={(e) => {
-            const ids: SettingsTab[] = ["wallpaper", "appearance", "data"];
+            const ids: SettingsTab[] = ["appearance", "features", "about"];
             if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
             e.preventDefault();
             const next =
@@ -119,11 +119,11 @@ export function Settings({
               [ids.indexOf(next)]?.focus();
           }}
           items={[
-            { key: "wallpaper", label: "壁纸", icon: <Images size={15} /> },
-            { key: "appearance", label: "外观", icon: <Palette size={15} /> },
+            { key: "appearance", label: "外观", icon: <Images size={15} /> },
+            { key: "features", label: "功能", icon: <Palette size={15} /> },
             {
-              key: "data",
-              label: "备份",
+              key: "about",
+              label: "关于",
               icon: <SlidersHorizontal size={15} />,
             },
           ]}
@@ -159,7 +159,7 @@ export function Settings({
       <div className="settings-content" id={`panel-${tab}`}>
         <GlassLightGroup>
           <fieldset disabled={busy}>
-            {tab === "wallpaper" && (
+            {tab === "appearance" && (
               <>
                 <div className="section-heading">
                   <h3>把艺术，留在日常</h3>
@@ -296,20 +296,6 @@ export function Settings({
                     onChange={(positionY) => change({ positionY })}
                   />
                 </div>
-                <p className="artwork-source">
-                  <Info size={13} />
-                  {art
-                    ? `${art.museum} · 公有领域图像`
-                    : "你的图片仅保存在当前浏览器。"}
-                </p>
-              </>
-            )}
-            {tab === "appearance" && (
-              <>
-                <div className="section-heading">
-                  <h3>找到舒服的光与影</h3>
-                  <span>实时预览</span>
-                </div>
                 <div className="field-grid">
                   <Range
                     label="壁纸亮度"
@@ -326,6 +312,55 @@ export function Settings({
                     max={20}
                     unit="px"
                     onChange={(blur) => change({ blur })}
+                  />
+                </div>
+                <p className="artwork-source">
+                  <Info size={13} />
+                  {art
+                    ? `${art.museum} · 公有领域图像`
+                    : "你的图片仅保存在当前浏览器。"}
+                </p>
+                <div className="section-heading">
+                  <h3>找到舒服的光与影</h3>
+                  <span>实时预览</span>
+                </div>
+                <div className="setting-row">
+                  <div>
+                    <label>玻璃明暗</label>
+                    <p>自动 = Auto，跟随壁纸；浅色 = Light，深色 = Dark</p>
+                  </div>
+                  <GlassSegmentedControl
+                    size="sm"
+                    aria-label="玻璃明暗"
+                    value={settings.glassMode}
+                    onChange={(value) =>
+                      change({ glassMode: value as AppSettings["glassMode"] })
+                    }
+                    items={[
+                      { key: "auto", label: "自动" },
+                      { key: "light", label: "浅色" },
+                      { key: "dark", label: "深色" },
+                    ]}
+                    {...base}
+                  />
+                </div>
+                <div className="setting-row">
+                  <div>
+                    <label>玻璃质感</label>
+                    <p>轻盈只保留模糊与折射，细腻额外开启色散与弹性</p>
+                  </div>
+                  <GlassSegmentedControl
+                    size="sm"
+                    aria-label="玻璃质感"
+                    value={settings.quality}
+                    onChange={(value) =>
+                      change({ quality: value as AppSettings["quality"] })
+                    }
+                    items={[
+                      { key: "low", label: "轻盈" },
+                      { key: "high", label: "细腻" },
+                    ]}
+                    {...base}
                   />
                 </div>
                 <div className="optics-heading">
@@ -446,45 +481,17 @@ export function Settings({
                     onChange={(value) => changeGlass("elasticity", value)}
                   />
                 </div>
-                <div className="setting-row">
-                  <div>
-                    <label>玻璃质感</label>
-                    <p>轻盈只保留模糊与折射，细腻额外开启色散与弹性</p>
-                  </div>
-                  <GlassSegmentedControl
-                    size="sm"
-                    aria-label="玻璃质感"
-                    value={settings.quality}
-                    onChange={(value) =>
-                      change({ quality: value as AppSettings["quality"] })
-                    }
-                    items={[
-                      { key: "low", label: "轻盈" },
-                      { key: "high", label: "细腻" },
-                    ]}
-                    {...base}
-                  />
-                </div>
-                <div className="setting-row">
-                  <div>
-                    <label>玻璃明暗</label>
-                    <p>自动 = Auto，跟随壁纸；浅色 = Light，深色 = Dark</p>
-                  </div>
-                  <GlassSegmentedControl
-                    size="sm"
-                    aria-label="玻璃明暗"
-                    value={settings.glassMode}
-                    onChange={(value) =>
-                      change({ glassMode: value as AppSettings["glassMode"] })
-                    }
-                    items={[
-                      { key: "auto", label: "自动" },
-                      { key: "light", label: "浅色" },
-                      { key: "dark", label: "深色" },
-                    ]}
-                    {...base}
-                  />
-                </div>
+                <GlassSurface
+                  className="settings-note"
+                  cornerRadius={26}
+                  {...base}
+                >
+                  玻璃效果会根据浏览器能力自动适配。系统开启“减少动态效果”时，页面会减少动画。
+                </GlassSurface>
+              </>
+            )}
+            {tab === "features" && (
+              <>
                 <div className="setting-row">
                   <div>
                     <label>时间格式</label>
@@ -515,16 +522,9 @@ export function Settings({
                   onChange={onChange}
                   busy={busy}
                 />
-                <GlassSurface
-                  className="settings-note"
-                  cornerRadius={26}
-                  {...base}
-                >
-                  玻璃效果会根据浏览器能力自动适配。系统开启“减少动态效果”时，页面会减少动画。
-                </GlassSurface>
               </>
             )}
-            {tab === "data" && (
+            {tab === "about" && (
               <>
                 <div className="section-heading">
                   <h3>把喜欢的，妥善收藏</h3>

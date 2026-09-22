@@ -562,7 +562,7 @@ export default function App() {
                 {...glassInteraction}
                 icon={<GalleryVerticalEnd size={15} />}
                 disabled={!ready}
-                onClick={() => setSettingsTab("wallpaper")}
+                onClick={() => setSettingsTab("appearance")}
               >
                 画作集<span className="gallery-count">03</span>
               </GlassButton>
@@ -990,7 +990,7 @@ export default function App() {
                 disabled={!ready}
                 onClick={() => setSettingsTab("appearance")}
               >
-                个性化
+                设置
                 <ChevronRight size={13} />
               </GlassButton>
             </footer>

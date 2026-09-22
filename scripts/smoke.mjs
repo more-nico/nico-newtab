@@ -391,7 +391,7 @@ for (const channel of channels) {
         ),
       )
       .toEqual(customizedGlass);
-    await other.getByRole("button", { name: /个性化/ }).click();
+    await other.getByRole("button", { name: /设置/ }).click();
     for (const [label, key] of [
       ["模糊 Blur", "blur"],
       ["饱和度 Saturation", "saturation"],
@@ -443,8 +443,10 @@ for (const channel of channels) {
         ),
       )
       .toEqual(PLAYGROUND_DEFAULTS);
+    await page.getByRole("radio", { name: "功能", exact: true }).click();
     await page.getByText("12 小时", { exact: true }).click({ force: true });
     await expect(other.locator(".day-period")).toBeVisible();
+    await page.getByRole("radio", { name: "外观", exact: true }).click();
     await page.getByText("细腻", { exact: true }).click({ force: true });
     await expect(page.locator(".dialog-body")).toHaveAttribute(
       "data-ngs-quality",
@@ -458,9 +460,11 @@ for (const channel of channels) {
     );
     await page.getByRole("slider", { name: "壁纸模糊" }).fill("0");
     await page.getByRole("slider", { name: "壁纸亮度" }).fill("85");
+    await page.getByRole("radio", { name: "功能", exact: true }).click();
     await page.getByText("24 小时", { exact: true }).click({ force: true });
     // Only two tiers remain: the retired "均衡" must not be offered.
     await expect(page.getByText("均衡", { exact: true })).toHaveCount(0);
+    await page.getByRole("radio", { name: "外观", exact: true }).click();
     await page.getByText("细腻", { exact: true }).click({ force: true });
     await expect(page.locator(".dialog-body")).toHaveAttribute(
       "data-ngs-quality",
@@ -479,7 +483,7 @@ for (const channel of channels) {
       path: `test-results/${channel}-appearance-390.png`,
     });
     await page.setViewportSize({ width: 1366, height: 768 });
-    await page.getByRole("radio", { name: "壁纸", exact: true }).click();
+    await page.getByRole("radio", { name: "外观", exact: true }).click();
     await page.screenshot({
       path: `test-results/${channel}-settings-1366.png`,
     });
@@ -524,7 +528,7 @@ for (const channel of channels) {
     });
     await expect(page.getByRole("alert")).toContainText("无法解码");
     await expect(other.locator(".art-credit")).toContainText("我的风景");
-    await page.getByRole("radio", { name: "备份", exact: true }).click();
+    await page.getByRole("radio", { name: "关于", exact: true }).click();
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "导出", exact: true }).click();
     const backupPath = `test-results/${channel}-backup.json`;
@@ -609,7 +613,7 @@ for (const channel of channels) {
       "data-ngs-quality",
       "low",
     );
-    await page.getByRole("button", { name: /个性化/ }).click();
+    await page.getByRole("button", { name: /设置/ }).click();
     await expect(page.locator(".dialog-body")).toHaveAttribute(
       "data-ngs-quality",
       "low",
@@ -799,10 +803,10 @@ for (const channel of channels) {
 
     stage = "custom search engines";
     console.log(channel, stage);
-    await page.getByRole("button", { name: /个性化/ }).click();
+    await page.getByRole("button", { name: /设置/ }).click();
     await page.getByRole("dialog").waitFor();
     await page
-      .locator(".settings-tabs .ngs-segment", { hasText: "外观" })
+      .locator(".settings-tabs .ngs-segment", { hasText: "功能" })
       .click();
     await expect(page.locator(".engine-empty")).toHaveText(
       "还没有自定义搜索引擎。",
@@ -930,10 +934,10 @@ for (const channel of channels) {
 
     stage = "removing the engine in use";
     console.log(channel, stage);
-    await reopened.getByRole("button", { name: /个性化/ }).click();
+    await reopened.getByRole("button", { name: /设置/ }).click();
     await reopened.getByRole("dialog").waitFor();
     await reopened
-      .locator(".settings-tabs .ngs-segment", { hasText: "外观" })
+      .locator(".settings-tabs .ngs-segment", { hasText: "功能" })
       .click();
     const inUseCard = reopened.locator(".engine-card", { hasText: "知乎" });
     await inUseCard.getByRole("button", { name: "移除" }).click();

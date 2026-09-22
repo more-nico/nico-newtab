@@ -6,11 +6,19 @@ import {
   GlassProvider,
   GlassSurface,
 } from "nico-glass-kit";
-import { Check, Globe, LoaderCircle, Plus, TriangleAlert } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Globe,
+  LoaderCircle,
+  Plus,
+  TriangleAlert,
+} from "lucide-react";
 import { ARTWORKS, defaultState } from "../data";
 import type { AppState } from "../types";
 import { normalizeUrl } from "../lib/validation";
-import { loadFavicon, repository } from "../lib/platform";
+import { isExtension, loadFavicon, repository } from "../lib/platform";
+import { pickExtensionTab } from "../lib/tabs";
 import {
   GlassMaterialProvider,
   glassOverLight,
@@ -137,6 +145,37 @@ export function Popup() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "保存失败，请重试。");
     }
+  }
+
+  /**
+   * Jumps to an extension page tab: an already-open one wins (this extension's
+   * own page first), otherwise a fresh tab is opened on this extension's page.
+   */
+  async function jumpToExtensionPage() {
+    if (!isExtension) {
+      window.close();
+      return;
+    }
+    const ownPage = chrome.runtime.getURL("index.html");
+    let tabs: chrome.tabs.Tab[] = [];
+    try {
+      tabs = await chrome.tabs.query({});
+    } catch {
+      tabs = [];
+    }
+    const target = pickExtensionTab(tabs, ownPage);
+    try {
+      if (target) {
+        await chrome.tabs.update(target.id, { active: true });
+        if (target.windowId !== undefined)
+          await chrome.windows.update(target.windowId, { focused: true });
+      } else {
+        await chrome.tabs.create({ url: ownPage });
+      }
+    } catch {
+      /* The popup closes regardless; the toolbar click can be repeated. */
+    }
+    window.close();
   }
 
   const host = page ? new URL(page.url).hostname : "";
@@ -271,6 +310,19 @@ export function Popup() {
                   <p>回到新标签页就能看到它了。</p>
                 </div>
               )}
+
+              <div className="popup-footer">
+                <GlassButton
+                  type="button"
+                  size="sm"
+                  className="text-glass-button"
+                  icon={<ArrowRight size={14} strokeWidth={1.8} />}
+                  onClick={() => void jumpToExtensionPage()}
+                  {...material.base}
+                >
+                  前往新标签页
+                </GlassButton>
+              </div>
             </GlassLightGroup>
           </GlassSurface>
         </div>

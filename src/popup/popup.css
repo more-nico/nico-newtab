@@ -175,6 +175,15 @@ body {
 .popup-empty .ngs-btn {
   margin-top: 3px;
 }
+/* The jump sits apart from the add flow: a quiet divider, then a centred
+   text button that leaves for an extension page tab. */
+.popup-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+}
 .spinning {
   animation: popup-spin 1s linear infinite;
 }

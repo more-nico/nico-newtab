@@ -16,7 +16,7 @@
       "128": "icons/icon-128.png"
     }
   },
-  "permissions": ["storage", "search", "favicon", "activeTab"],
+  "permissions": ["storage", "search", "favicon", "activeTab", "tabs"],
   "host_permissions": [
     "https://suggestqueries.google.com/*",
     "https://api.bing.com/*",

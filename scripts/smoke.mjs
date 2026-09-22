@@ -1012,6 +1012,20 @@ for (const channel of channels) {
     ).toBeDisabled();
     await duplicate.close();
 
+    stage = "toolbar popup jumps to an extension page tab";
+    console.log(channel, stage);
+    const jumper = await stubPopup();
+    await expect(
+      jumper.getByRole("button", { name: "前往新标签页" }),
+    ).toBeVisible();
+    const jumpTab = context.waitForEvent("page");
+    await jumper.getByRole("button", { name: "前往新标签页" }).click();
+    const jumped = await jumpTab;
+    await jumped.waitForLoadState("domcontentloaded");
+    expect(jumped.url()).toBe(`chrome-extension://${browser.id}/index.html`);
+    await jumped.close();
+    await jumper.close();
+
     expect(errors).toEqual([]);
     expect(badRequests).toEqual([]);
     results.push({
@@ -1043,6 +1057,7 @@ for (const channel of channels) {
         "reduced motion",
         "browser restart persistence",
         "toolbar popup add flow",
+        "toolbar popup jump",
       ],
     });
     console.log(`${channel}: PASS (${browser.version})`);

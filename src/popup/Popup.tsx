@@ -11,7 +11,11 @@ import { ARTWORKS, defaultState } from "../data";
 import type { AppState } from "../types";
 import { normalizeUrl } from "../lib/validation";
 import { loadFavicon, repository } from "../lib/platform";
-import { GlassMaterialProvider, useGlassMaterialValue } from "../lib/glass";
+import {
+  GlassMaterialProvider,
+  glassOverLight,
+  useGlassMaterialValue,
+} from "../lib/glass";
 
 const MAX_SHORTCUTS = 200;
 const MAX_NAME_LENGTH = 40;
@@ -140,7 +144,7 @@ export function Popup() {
   return (
     <GlassProvider
       quality={reduced ? "low" : state.settings.quality}
-      overLight="auto"
+      overLight={glassOverLight(state.settings.glassMode)}
       lensMapRasterScale={state.settings.glass.mapScale}
     >
       <GlassMaterialProvider value={material}>

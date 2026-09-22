@@ -27,6 +27,7 @@ import type {
 } from "../types";
 import { MAX_BACKUP_BYTES, parseBackup } from "../lib/validation";
 import { Modal } from "./Modal";
+import { SearchEngineSettings } from "./SearchEngineSettings";
 import { useGlassMaterial } from "../lib/glass";
 
 export type SettingsTab = "wallpaper" | "appearance" | "data";
@@ -466,6 +467,26 @@ export function Settings({
                 </div>
                 <div className="setting-row">
                   <div>
+                    <label>玻璃明暗</label>
+                    <p>自动 = Auto，跟随壁纸；浅色 = Light，深色 = Dark</p>
+                  </div>
+                  <GlassSegmentedControl
+                    size="sm"
+                    aria-label="玻璃明暗"
+                    value={settings.glassMode}
+                    onChange={(value) =>
+                      change({ glassMode: value as AppSettings["glassMode"] })
+                    }
+                    items={[
+                      { key: "auto", label: "自动" },
+                      { key: "light", label: "浅色" },
+                      { key: "dark", label: "深色" },
+                    ]}
+                    {...base}
+                  />
+                </div>
+                <div className="setting-row">
+                  <div>
                     <label>时间格式</label>
                     <p>使用设备的本地时间</p>
                   </div>
@@ -485,6 +506,15 @@ export function Settings({
                     {...base}
                   />
                 </div>
+                <div className="optics-subheading">
+                  <span>搜索引擎</span>
+                  <small>自定义搜索地址；自定义引擎不提供搜索建议</small>
+                </div>
+                <SearchEngineSettings
+                  settings={settings}
+                  onChange={onChange}
+                  busy={busy}
+                />
                 <GlassSurface
                   className="settings-note"
                   cornerRadius={26}

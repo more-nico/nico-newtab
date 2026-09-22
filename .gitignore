@@ -7,3 +7,4 @@ test-results/
 *.kilo
 AGENTS.md
 .workbuddy/
+.workbuddy-ai/

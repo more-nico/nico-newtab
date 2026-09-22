@@ -17,9 +17,6 @@
   -webkit-font-smoothing: antialiased;
   --ngs-font-family:
     "Nico UI", -apple-system, BlinkMacSystemFont, "Microsoft YaHei", sans-serif;
-  --ink: #34443f;
-  --muted: #7b8780;
-  --accent: #526d5e;
   /* One radius family, anchored on the round close button: the kit's icon/lg
      button is 52px square, so its radius is 26px. Every glass shell uses that
      same 26px, controls nested in a shell use 26 − 4px of inner padding, and
@@ -101,13 +98,36 @@ button:disabled {
   position: relative;
   min-height: 100svh;
   isolation: isolate;
+  /* Ink for the text painted straight onto the wallpaper — the clock, the
+     website names, the footer. The kit's tokens only cover text inside glass,
+     so the page keeps its own set and swaps it with the same light/dark verdict
+     the glass uses (`data-light`, resolved by the kit's probe or forced in
+     settings). */
+  --ink: #ffffff;
+  --ink-soft: #ffffffd9;
+  --ink-faint: #ffffffa6;
+  --ink-accent: #d3e0c8;
+  --ink-warn: #ffe9c9;
+  color: var(--ink);
+}
+.app[data-light="true"] {
+  --ink: rgba(10, 12, 20, 0.92);
+  --ink-soft: rgba(10, 12, 20, 0.7);
+  --ink-faint: rgba(10, 12, 20, 0.52);
+  --ink-accent: #2f5d52;
+  --ink-warn: #8a4b16;
 }
 .wallpaper-base,
 .wallpaper,
 .wallpaper-shade {
   position: fixed;
   inset: 0;
-  pointer-events: none;
+  /* Must stay hit-testable: the kit's overLight probe enumerates the backdrop
+     with document.elementsFromPoint, and hit-testing skips pointer-events:none
+     elements — with it, the probe never saw the wallpaper and always fell back
+     to the html background, so data-ngs-light was permanently false. The
+     layers sit behind the page shell, so nothing above them loses a click. */
+  pointer-events: auto;
 }
 .wallpaper-base {
   z-index: -3;
@@ -162,7 +182,7 @@ button:disabled {
   line-height: 1;
 }
 .brand-wordmark span {
-  color: #d3e0c8;
+  color: var(--ink-accent);
 }
 .brand-divider {
   height: 17px;
@@ -172,11 +192,10 @@ button:disabled {
 .brand-caption {
   font-size: 11px;
   letter-spacing: 2px;
-  color: #ffffffe0;
+  color: var(--ink-soft);
 }
 .gallery-button {
   --ngs-glass-tint-strength: 0.08 !important;
-  box-shadow: 0 4px 18px #1224220a !important;
 }
 .gallery-button .ngs-btn-inner {
   padding: 10px 16px !important;
@@ -203,14 +222,14 @@ button:disabled {
 }
 .clock-section {
   text-align: center;
-  color: #fff;
+  color: var(--ink);
   text-shadow: 0 3px 26px #152f2d38;
 }
 .greeting {
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 2.6px;
-  color: #ffffffd9;
+  color: var(--ink-soft);
   margin-bottom: 8px;
 }
 .time-line {
@@ -220,17 +239,12 @@ button:disabled {
   position: relative;
 }
 .clock {
-  font-size: clamp(80px, 8.4vw, 130px);
-  font-weight: 200;
-  line-height: 1.18;
-  letter-spacing: -5px;
-  font-variant-numeric: tabular-nums;
-  font-family:
-    "Segoe UI Variable",
-    "Segoe UI",
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  /* GlassText owns the type: size, weight, tracking and tabular figures are
+     props, because it measures the glyph rasters from them. A flex box keeps
+     the wrapper exactly as tall as the measured glyphs — an inline child would
+     add the line-height strut's descender underneath. */
+  display: flex;
+  color: var(--ink);
 }
 .day-period {
   font-size: 12px;
@@ -242,18 +256,27 @@ button:disabled {
 .date {
   font-size: 13px;
   letter-spacing: 3px;
-  color: #fffffff0;
+  color: var(--ink);
   margin-top: 10px;
 }
 .search-form {
   margin-top: 47px;
-  width: min(580px, 100%);
+  width: min(620px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Anchors the suggestion popup and lifts both popups above the tiles below:
+     .ngs-motion sets will-change, which traps descendant z-index values. */
+  position: relative;
+  z-index: 60;
 }
 .search-input {
   display: block !important;
-  width: 100%;
-  border: 1px solid #ffffff20;
-  box-shadow: 0 12px 38px #1b2d3012 !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  /* No 1px border here: the border sits outside the glass layer (which fills
+     the content box), so it reads as a hard white ring detached from the rim.
+     The kit's own .ngs-highlight already draws the edge highlight. */
 }
 .search-input .ngs-input-inner {
   height: 58px;
@@ -284,6 +307,185 @@ button:disabled {
 .search-submit:disabled {
   opacity: 0.5;
 }
+/* Clear affordance inside a GlassInput's trailing slot. The kit resets buttons
+   in `.ngs-input-affix`, so this only supplies the shape and the states. */
+.field-clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  color: var(--ngs-text-dim);
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+.field-clear:hover {
+  color: var(--ngs-text);
+  background: var(--ngs-tint-hover);
+}
+.field-clear:disabled {
+  opacity: 0.5;
+}
+/* The search field pairs the clear button with the submit action. */
+.search-input .ngs-input-affix--trailing {
+  gap: 10px;
+}
+/* Engine picker: a nico-glass-kit GlassSelect sized to the search field. */
+.search-engine {
+  flex: none;
+  min-width: 0;
+}
+.search-engine .ngs-select-trigger-inner {
+  height: 58px;
+  min-height: 58px;
+  padding: 0 15px;
+  gap: 8px;
+  font-size: 13px;
+}
+/* Sized to its label so nothing is clipped, capped so a long custom name
+   ellipsizes instead of squeezing the search field. */
+.search-engine .ngs-select-value {
+  flex: 0 0 auto;
+  max-width: 104px;
+}
+.engine-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.engine-option-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.engine-glyph {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-weight: 600;
+  line-height: 1;
+}
+/* Suggestions mirror .ngs-select-popup so both dropdowns read as one system. */
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: block;
+  z-index: 50;
+  overflow: hidden;
+  animation: ngs-select-pop-in 0.15s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+}
+/* The kit animates the inner .ngs-motion while the container owns the frame
+   (its box-shadow). Under elasticity the frame stays put and the glass slides
+   out of it: a detached ghost on small strongly-shadowed surfaces, and cut-off
+   rows on clipped popups. Paint the frame on the layer that actually moves.
+   :where() keeps these at zero specificity so the per-surface frames below win
+   regardless of order, and :has() leaves any surface without a motion layer on
+   its original shadow.
+   Glyph tiles are excluded: GlassText masks only .ngs-effect and .ngs-highlight
+   to the character, so a shadow on .ngs-motion would draw the tile's rectangle
+   around every digit. The kit already drops it for the container
+   (`.ngs-surface[data-ngs-shape=glyph]{box-shadow:none}`); this keeps the moving
+   layer consistent with that. */
+:where(.ngs-surface:has(> .ngs-motion):not([data-ngs-shape="glyph"])) {
+  box-shadow: none !important;
+}
+:where(.ngs-surface:not([data-ngs-shape="glyph"]) > .ngs-motion) {
+  box-shadow: var(--ngs-shadow-sm);
+}
+/* Per-surface frames, mirroring every box-shadow this stylesheet used to set
+   on the container. */
+.gallery-button > .ngs-motion {
+  box-shadow: 0 4px 18px #1224220a;
+}
+.search-input > .ngs-motion,
+.search-engine .ngs-select-trigger > .ngs-motion {
+  box-shadow: 0 12px 38px #1b2d3012;
+}
+.shortcut-glass > .ngs-motion {
+  box-shadow: 0 5px 20px #21383216;
+}
+.settings-button > .ngs-motion {
+  box-shadow: 0 6px 24px #192b2310;
+}
+.dialog-pane > .ngs-motion {
+  box-shadow: 0 12px 44px #0a0f1126;
+}
+.toast > .ngs-motion {
+  box-shadow: 0 12px 48px #0a0f1126;
+}
+.dialog-body .ngs-surface:not([data-ngs-shape="glyph"]) > .ngs-motion {
+  box-shadow: 0 3px 14px #00000012;
+}
+.add-glass > .ngs-motion,
+.range-setting .ngs-slider > .ngs-motion {
+  box-shadow: none;
+}
+/* Clipped popups additionally need the clip to travel with the frame. */
+.search-engine .ngs-select-popup,
+.search-suggestions {
+  overflow: visible !important;
+}
+.search-engine .ngs-select-popup > .ngs-motion,
+.search-suggestions > .ngs-motion {
+  overflow: hidden;
+}
+.search-suggestions > .ngs-motion > .ngs-content {
+  padding: 5px;
+}
+.search-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.search-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 21px;
+  color: var(--ngs-text);
+  font-size: 13px;
+  text-align: left;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.search-suggestion:hover,
+.search-suggestion.is-active {
+  background: var(--ngs-tint-hover);
+}
+.search-suggestion-icon {
+  flex: none;
+  color: var(--ngs-text-dim);
+}
+.search-suggestion-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* TEMPORARY: makes a blocked suggestion request visible instead of silent. */
+.search-suggest-error {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--ink-warn);
+  text-shadow: 0 1px 10px #1b2d30aa;
+}
 .shortcuts-section {
   width: min(620px, 100%);
   margin-top: 29px;
@@ -294,7 +496,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   padding: 0 12px 16px;
-  color: #ffffffce;
+  color: var(--ink-soft);
   font-size: 10px;
   letter-spacing: 1.6px;
 }
@@ -324,13 +526,12 @@ button:disabled {
   flex-direction: column;
   align-items: center;
   gap: 11px;
-  color: #fff;
+  color: var(--ink);
   border-radius: 20px;
 }
 .shortcut-glass {
   width: 62px;
   height: 62px;
-  box-shadow: 0 5px 20px #21383216 !important;
   transition: transform 0.2s;
 }
 .shortcut-glass > .ngs-motion > .ngs-content {
@@ -340,6 +541,12 @@ button:disabled {
 }
 .shortcut-link:hover .shortcut-glass {
   transform: translateY(-3px);
+}
+/* At 细腻 the glass already answers the pointer with dispersion and elasticity,
+   and the two motions read as a stutter: the tile jumps up, then deforms. Let
+   the glass do the talking on its own. */
+.app[data-quality="high"] .shortcut-link:hover .shortcut-glass {
+  transform: none;
 }
 .shortcut-link:focus-visible {
   outline-offset: 7px;
@@ -357,21 +564,21 @@ button:disabled {
   width: 29px;
   height: 29px;
   object-fit: contain;
+  /* Uploaded icons are often opaque squares; a slight radius stops them reading
+     as a raw square pasted onto the glass. Invisible on transparent logos. */
+  border-radius: 6px;
 }
 .site-letter {
   font-size: 25px;
   font-weight: 400;
   line-height: 1;
 }
-.add-glass {
-  box-shadow: none !important;
-}
 .add-shortcut .shortcut-name {
   opacity: 0.85;
 }
 .empty-hint {
   text-align: center;
-  color: #ffffffe0;
+  color: var(--ink-soft);
   font-size: 11px;
   letter-spacing: 1px;
   margin-top: 23px;
@@ -400,6 +607,30 @@ button:disabled {
   outline: 2px dashed #fff8;
   outline-offset: 4px;
 }
+/* The tile being moved stays put but steps back, so the pointer's ghost and the
+   original never read as two separate shortcuts. */
+.is-dragging {
+  opacity: 0.35;
+}
+/* What the pointer carries. Chrome cannot rasterise the tile's backdrop-filter
+   into a drag image, so the browser default is a black box with a duplicated
+   label; this is a flat stand-in painted on top of the wallpaper instead. The
+   radius is only a fallback — buildDragGhost mirrors the live tile's own. */
+.drag-ghost {
+  position: fixed;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 21px;
+  background: rgba(255, 255, 255, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 10px 24px rgba(18, 30, 36, 0.34);
+  color: #16202a;
+  pointer-events: none;
+}
 .page-footer {
   width: 100%;
   display: flex;
@@ -413,13 +644,13 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 13px;
-  color: #ffffffe3;
+  color: var(--ink-soft);
   min-width: 0;
   max-width: 45%;
   transition: color 0.2s;
 }
 .art-credit:hover {
-  color: #fff;
+  color: var(--ink);
 }
 .credit-icon {
   width: 35px;
@@ -448,7 +679,7 @@ button:disabled {
 .art-credit small {
   display: block;
   font-size: 10px;
-  color: #ffffffb5;
+  color: var(--ink-faint);
   margin-top: 7px;
   letter-spacing: 1px;
   max-width: 280px;
@@ -461,7 +692,7 @@ button:disabled {
 }
 .footer-note {
   font-size: 10px;
-  color: #ffffffa6;
+  color: var(--ink-faint);
   letter-spacing: 3px;
   position: absolute;
   left: 50%;
@@ -469,7 +700,6 @@ button:disabled {
 }
 .settings-button {
   --ngs-glass-tint-strength: 0.1 !important;
-  box-shadow: 0 6px 24px #192b2310 !important;
 }
 .settings-button .ngs-btn-inner {
   gap: 9px !important;
@@ -480,7 +710,7 @@ button:disabled {
   position: fixed;
   bottom: 8px;
   right: 13px;
-  color: #ffffff88;
+  color: var(--ink-faint);
   font-size: 9px;
   letter-spacing: 1px;
 }
@@ -534,7 +764,6 @@ button:disabled {
 }
 .dialog-pane {
   flex: none;
-  box-shadow: 0 12px 44px #0a0f1126 !important;
   animation: nico-pane-in 0.26s cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
 }
 /* Top row: the caller's head block and the round close button, both glass.
@@ -1034,6 +1263,107 @@ button:disabled {
 .import-confirm .button-pair {
   justify-content: flex-end;
 }
+/* Custom search engines: one glass row per engine, an inline editor, and a
+   single add action — mirroring the backup cards' layout language. */
+.engine-settings {
+  margin-top: 15px;
+}
+.engine-empty {
+  font-size: 11px;
+  color: var(--ngs-text-dim);
+  margin-bottom: 14px;
+}
+.engine-card {
+  display: block;
+  margin-bottom: 10px;
+}
+.engine-card > .ngs-motion > .ngs-content {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 15px;
+}
+/* Same trap as .editor-icon: a bare `> div` also matched .button-pair, so the
+   card's buttons were left-aligned inside a stretched box instead of sitting
+   flush with the card's right padding edge. */
+.engine-card-text {
+  flex: 1;
+  min-width: 0;
+}
+.engine-card strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+}
+.engine-card small {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--ngs-text-dim);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.engine-card-icon {
+  display: grid;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  color: var(--ngs-text-dim);
+}
+.engine-card .ngs-btn-inner,
+.engine-actions .ngs-btn-inner {
+  font-size: 11px !important;
+}
+.engine-editor {
+  display: block;
+  margin-top: 12px;
+}
+.engine-confirm {
+  display: block;
+  margin: 0 0 10px;
+}
+.engine-editor > .ngs-motion > .ngs-content {
+  padding: 17px;
+}
+.engine-form {
+  display: flex;
+  flex-direction: column;
+}
+.engine-form > label {
+  font-size: 12px;
+  color: var(--ngs-text);
+  margin-bottom: 9px;
+}
+.engine-form > .ngs-input {
+  width: 100%;
+  margin-bottom: 16px;
+}
+.engine-form .ngs-input input {
+  font-size: 13px;
+}
+.engine-help {
+  font-size: 10px;
+  color: var(--ngs-text-dim);
+  margin: -6px 0 14px;
+  line-height: 1.7;
+}
+.engine-form .button-pair {
+  justify-content: flex-end;
+}
+.engine-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+.engine-limit {
+  font-size: 10px;
+  color: var(--ngs-text-dim);
+}
 .about-line {
   display: flex;
   align-items: center;
@@ -1072,6 +1402,44 @@ button:disabled {
 .shortcut-form .ngs-input input {
   font-size: 13px;
 }
+/* Icon picker inside the shortcut editor: preview, copy, actions. */
+.editor-icon {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-bottom: 18px;
+}
+.editor-icon-preview {
+  display: grid;
+  flex: none;
+  width: 45px;
+  height: 45px;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  overflow: hidden;
+}
+.editor-icon-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Only the label/description block stretches. A bare `.editor-icon > div` also
+   matched .button-pair, handing the buttons a stretched box so they sat at its
+   left edge — ~72px short of the inputs above and the ↑/↓ buttons below. */
+.editor-icon-text {
+  flex: 1;
+  min-width: 0;
+}
+.editor-icon label {
+  font-size: 12px;
+  color: var(--ngs-text);
+}
+.editor-icon p {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--ngs-text-dim);
+}
 .editor-order {
   display: flex;
   align-items: center;
@@ -1106,7 +1474,6 @@ button:disabled {
   left: 50%;
   transform: translateX(-50%);
   border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
-  box-shadow: 0 12px 48px #0a0f1126;
   color: var(--ngs-text);
   z-index: 700;
   max-width: min(500px, calc(100vw - 32px));
@@ -1132,7 +1499,7 @@ button:disabled {
 }
 @media (min-height: 1000px) {
   .main-content {
-    padding-top: 15vh;
+    padding-top: 5vh;
   }
   .search-form {
     margin-top: 55px;
@@ -1171,10 +1538,6 @@ button:disabled {
   .main-content {
     padding-top: 10vh;
   }
-  .clock {
-    font-size: 92px;
-    letter-spacing: -4px;
-  }
   .greeting {
     font-size: 10px;
     letter-spacing: 1.5px;
@@ -1185,6 +1548,16 @@ button:disabled {
   }
   .search-form {
     margin-top: 37px;
+    gap: 9px;
+  }
+  /* Collapse the picker to its icon so the field keeps a usable width. */
+  .search-engine .ngs-select-value {
+    display: none;
+  }
+  .search-engine .ngs-select-trigger-inner {
+    height: 55px;
+    min-height: 55px;
+    padding: 0 14px;
   }
   .search-input .ngs-input-inner {
     height: 55px;
@@ -1346,13 +1719,9 @@ button:disabled {
     transform: none;
   }
 }
-.dialog-body .ngs-surface {
-  box-shadow: 0 3px 14px #00000012;
-}
 /* Track height, knob and padding come from the kit's sm size — the same
    GlassSlider size the playground drives its own controls with. */
 .range-setting .ngs-slider {
   --ngs-rail-fill: color-mix(in srgb, var(--ngs-text) 26%, transparent);
   --ngs-knob-fill: var(--ngs-fill);
-  box-shadow: none;
 }

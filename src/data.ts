@@ -68,7 +68,10 @@ export function defaultState(): AppState {
       blur: 0,
       glass: { ...DEFAULT_GLASS_SETTINGS },
       quality: "high",
+      glassMode: "auto",
       clockFormat: "24",
+      searchEngine: "default",
+      customEngines: [],
     },
     shortcuts: [],
   };

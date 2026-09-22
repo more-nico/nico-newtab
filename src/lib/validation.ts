@@ -1,8 +1,19 @@
 import { ARTWORKS, DEFAULT_GLASS_SETTINGS } from "../data";
-import type { AppState, BackupV1 } from "../types";
+import {
+  DEFAULT_ENGINE_ID,
+  MAX_CUSTOM_ENGINES,
+  MAX_ENGINE_NAME,
+  SEARCH_PLACEHOLDER,
+  isBuiltInEngineId,
+} from "./engines";
+import type { AppState, BackupV1, CustomEngine, GlassMode } from "../types";
 
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 export const MAX_BACKUP_BYTES = 32 * 1024 * 1024;
+/** Source image for a shortcut icon; the stored icon itself is 128px WebP. */
+export const MAX_ICON_BYTES = 5 * 1024 * 1024;
+/** Upper bound for the stored icon data URL (~150 KB), well above the encoder's output. */
+const MAX_ICON_DATA_URL = 200_000;
 const fail = (): never => {
   throw new Error("文件内容不完整或格式不受支持，原有数据未更改。");
 };
@@ -43,6 +54,34 @@ export function normalizeUrl(input: string): string {
     throw new Error("请输入不含用户名和密码的 HTTP / HTTPS 地址。");
   }
   return url.href;
+}
+
+const QUERY_ALIAS = "{query}";
+// A placeholder-free probe: URL parsing rewrites `{`/`}` but leaves this alone,
+// so the template can be validated by normalizeUrl and restored afterwards.
+const QUERY_PROBE = "nico-query-token";
+const countToken = (text: string, token: string) =>
+  text.split(token).length - 1;
+
+/**
+ * Validates and normalizes a custom engine's search address. The template must
+ * carry exactly one placeholder — `%s` (preferred) or `{query}` — which is
+ * always normalized to `%s`.
+ */
+export function normalizeSearchTemplate(input: unknown): string {
+  const value = typeof input === "string" ? input.trim() : "";
+  if (!value || value.length > 2048)
+    throw new Error("请输入搜索地址，例如 https://example.com/search?q=%s。");
+  const hasPercent = countToken(value, SEARCH_PLACEHOLDER) > 0;
+  const hasAlias = countToken(value, QUERY_ALIAS) > 0;
+  const token = hasPercent ? SEARCH_PLACEHOLDER : QUERY_ALIAS;
+  if (hasPercent === hasAlias || countToken(value, token) !== 1)
+    throw new Error("搜索地址需要且只能包含一个 %s 占位符。");
+  const probe = value.replace(token, QUERY_PROBE);
+  const normalized = normalizeUrl(probe);
+  if (countToken(normalized, QUERY_PROBE) !== 1)
+    throw new Error("搜索地址需要且只能包含一个 %s 占位符。");
+  return normalized.replace(QUERY_PROBE, SEARCH_PLACEHOLDER);
 }
 
 export function parseState(value: unknown): AppState {
@@ -100,6 +139,42 @@ export function parseState(value: unknown): AppState {
     customWallpaper = { assetId: c.assetId, name: c.name, mime: "image/webp" };
   }
   if (s.wallpaper === "custom" && !customWallpaper) return fail();
+  // Custom engines arrived after the first release: a missing field migrates to
+  // an empty list, while malformed entries invalidate the whole payload the same
+  // way shortcuts do.
+  const rawEngines = s.customEngines === undefined ? [] : s.customEngines;
+  if (!Array.isArray(rawEngines) || rawEngines.length > MAX_CUSTOM_ENGINES)
+    return fail();
+  const engineIds = new Set<string>();
+  const customEngines: CustomEngine[] = [];
+  for (const item of rawEngines) {
+    if (
+      !record(item) ||
+      !boundedString(item.id, 100) ||
+      !boundedString(item.name, MAX_ENGINE_NAME) ||
+      engineIds.has(item.id) ||
+      isBuiltInEngineId(item.id)
+    )
+      return fail();
+    let urlTemplate: string;
+    try {
+      urlTemplate = normalizeSearchTemplate(item.urlTemplate);
+    } catch {
+      return fail();
+    }
+    engineIds.add(item.id);
+    customEngines.push({ id: item.id, name: item.name.trim(), urlTemplate });
+  }
+  // The selection is lenient on purpose: a missing, mistyped or dangling engine
+  // silently falls back to the browser default instead of rejecting the state.
+  const searchEngine: string =
+    typeof s.searchEngine === "string" &&
+    (isBuiltInEngineId(s.searchEngine) || engineIds.has(s.searchEngine))
+      ? s.searchEngine
+      : DEFAULT_ENGINE_ID;
+  // Added later, so migrate leniently: anything unrecognised means "auto".
+  const glassMode: GlassMode =
+    s.glassMode === "light" || s.glassMode === "dark" ? s.glassMode : "auto";
   const ids = new Set<string>();
   const shortcuts = value.shortcuts.map((item) => {
     if (
@@ -111,7 +186,20 @@ export function parseState(value: unknown): AppState {
     )
       return fail();
     ids.add(item.id);
-    return { id: item.id, name: item.name.trim(), url: normalizeUrl(item.url) };
+    // Added later, so migrate leniently: a missing or unusable icon just means
+    // the tile keeps using the site's own favicon.
+    const iconDataUrl =
+      typeof item.iconDataUrl === "string" &&
+      item.iconDataUrl.length <= MAX_ICON_DATA_URL &&
+      item.iconDataUrl.startsWith("data:image/")
+        ? item.iconDataUrl
+        : undefined;
+    return {
+      id: item.id,
+      name: item.name.trim(),
+      url: normalizeUrl(item.url),
+      ...(iconDataUrl ? { iconDataUrl } : {}),
+    };
   });
   // Reconstruct allowed fields; never merge arbitrary imported keys into state.
   return {
@@ -136,7 +224,10 @@ export function parseState(value: unknown): AppState {
         elasticity: glass.elasticity,
       },
       quality,
+      glassMode,
       clockFormat: s.clockFormat,
+      searchEngine,
+      customEngines,
     },
     shortcuts,
   };

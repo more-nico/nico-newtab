@@ -71,6 +71,32 @@ for (const channel of channels) {
       )
         badRequests.push(request.url());
     });
+    // Trailing controls must sit flush with their row's content edge. When a
+    // bare `> div { flex: 1 }` rule also matches a .button-pair, the buttons get
+    // a stretched box and strand themselves mid-row — the trap that hid in both
+    // the shortcut editor's icon row and the engine cards.
+    const rightEdgeProblems = (target, checks) =>
+      target.evaluate((checks) => {
+        const problems = [];
+        for (const check of checks) {
+          const control = document.querySelector(check.control);
+          const reference = document.querySelector(check.reference);
+          if (!control || !reference) {
+            problems.push("missing node for " + check.label);
+            continue;
+          }
+          const inset = check.paddingInset
+            ? parseFloat(getComputedStyle(reference).paddingRight)
+            : 0;
+          const expected = reference.getBoundingClientRect().right - inset;
+          const actual = control.getBoundingClientRect().right;
+          if (Math.abs(expected - actual) > 1)
+            problems.push(
+              `${check.label}: ends at ${actual.toFixed(1)}, row ends at ${expected.toFixed(1)}`,
+            );
+        }
+        return problems;
+      }, checks);
     stage = "new tab override";
     await page.goto(channel === "msedge" ? "edge://newtab" : "chrome://newtab");
     await expect(
@@ -98,6 +124,25 @@ for (const channel of channels) {
       ).size,
     ).toBe(1);
     expect(initialRequests.some((url) => /^https?:/.test(url))).toBe(false);
+    // The clock is GlassText: one glass tile per character, and none of them
+    // may carry a frame — a shadow on the moving layer would draw the tile's
+    // rectangle around every digit.
+    await expect(page.locator(".clock .ngs-text-tile").first()).toBeAttached();
+    const clock = await page.evaluate(() => {
+      const tiles = [...document.querySelectorAll(".clock .ngs-text-tile")];
+      return {
+        count: tiles.length,
+        framed: tiles.filter(
+          (tile) =>
+            getComputedStyle(tile.querySelector(":scope > .ngs-motion"))
+              .boxShadow !== "none",
+        ).length,
+        glyphs: document.querySelector(".clock")?.textContent ?? "",
+      };
+    });
+    expect(clock.count).toBe(5);
+    expect(clock.framed).toBe(0);
+    expect(clock.glyphs).toMatch(/^\d{2}:\d{2}$/);
     await page.waitForTimeout(250);
     await page.screenshot({ path: `test-results/${channel}-home-1366.png` });
 
@@ -107,9 +152,7 @@ for (const channel of channels) {
       await page.getByRole("button", { name: "添加常用网站" }).click();
       await expect(page.getByLabel("网站名称", { exact: true })).toBeFocused();
       await expect(page.locator(".shortcut-form .ngs-input")).toHaveCount(2);
-      for (const input of await page
-        .locator(".shortcut-form .ngs-input")
-        .all())
+      for (const input of await page.locator(".shortcut-form .ngs-input").all())
         await expect(input).toHaveAttribute("data-ngs-quality", "high");
       // Refraction under the MV3 CSP lives on the dialog pane: the surfaces
       // nested inside it intentionally drop their own backdrop-filter, because
@@ -131,6 +174,30 @@ for (const channel of channels) {
     await expect(
       page.getByRole("link", { name: "GitHub", exact: true }),
     ).toHaveAttribute("href", "https://github.com/");
+    // A shortcut opens beside the new tab page, never on top of it — the page
+    // must survive the click so the user still has their tiles. The route has to
+    // live on the context: the click creates a *new* page, and a route
+    // registered on `page` never sees it.
+    const githubRoute = (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "<h1>GitHub</h1>",
+      });
+    await context.route("https://github.com/**", githubRoute);
+    try {
+      const origin = page.url();
+      const opened = context.waitForEvent("page");
+      await page.getByRole("link", { name: "GitHub", exact: true }).click();
+      const tab = await opened;
+      await tab.waitForLoadState("domcontentloaded");
+      expect(tab.url()).toBe("https://github.com/");
+      expect(page.url()).toBe(origin);
+      await tab.close();
+      await page.bringToFront();
+    } finally {
+      await context.unroute("https://github.com/**", githubRoute);
+    }
     const other = await context.newPage();
     await other.goto(`chrome-extension://${browser.id}/index.html`);
     await expect(other.locator(".shortcut-name")).toContainText([
@@ -145,6 +212,21 @@ for (const channel of channels) {
     await page.getByLabel("网站名称", { exact: true }).fill("阅读");
     await page.getByRole("button", { name: "向前移动" }).click();
     await expect(page.locator(".editor-order")).toContainText("2 / 3");
+    // The icon and order rows end on the same edge as the fields above them.
+    expect(
+      await rightEdgeProblems(page, [
+        {
+          label: "icon row upload button",
+          control: ".editor-icon .button-pair .ngs-btn:last-child",
+          reference: ".dialog-body .ngs-input",
+        },
+        {
+          label: "order row move button",
+          control: ".editor-order .button-pair .ngs-btn:last-child",
+          reference: ".dialog-body .ngs-input",
+        },
+      ]),
+    ).toEqual([]);
     await page.getByRole("button", { name: "保存网站", exact: true }).click();
     await expect(other.locator(".shortcut-name")).toContainText([
       "GitHub",
@@ -152,10 +234,53 @@ for (const channel of channels) {
       "MDN",
       "添加网站",
     ]);
+    // Chrome cannot rasterise the tile's backdrop-filter into a drag image, so
+    // the default ghost is an opaque black box carrying a second copy of the
+    // name. Ours must be the flat stand-in, and it must carry the icon only.
+    await page.evaluate(() => {
+      window.__dragImages = [];
+      const original = DataTransfer.prototype.setDragImage;
+      DataTransfer.prototype.setDragImage = function (element, x, y) {
+        window.__dragImages.push({
+          className: element?.className ?? null,
+          text: element?.textContent ?? null,
+          children: element?.children.length ?? -1,
+        });
+        return original.call(this, element, x, y);
+      };
+    });
     await page
       .locator(".shortcut-item")
       .nth(2)
       .dragTo(page.locator(".shortcut-item").nth(0));
+    const ghosts = await page.evaluate(() => window.__dragImages);
+    expect(ghosts).toHaveLength(1);
+    expect(ghosts[0].className).toBe("drag-ghost");
+    // Icon only — the label must not ride along as a second copy.
+    expect(ghosts[0].children).toBe(1);
+    expect(ghosts[0].text).not.toContain("MDN");
+    // The hover lift is a 轻盈-only affordance: at 细腻 the glass already answers
+    // the pointer with dispersion and elasticity, and the 3px hop in front of it
+    // reads as a stutter. 细腻 is the default, so this needs no setup — and it
+    // must not be faked by poking data-quality, because the clock re-renders
+    // every second and React would put the attribute straight back.
+    await expect(page.locator(".app")).toHaveAttribute("data-quality", "high");
+    {
+      const tile = page.locator(".shortcut-item").first();
+      const box = await tile.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.waitForTimeout(400);
+      expect(
+        await page.evaluate(
+          () =>
+            getComputedStyle(
+              document.querySelector(".shortcut-item .shortcut-glass"),
+            ).transform,
+        ),
+      ).toBe("none");
+      await page.mouse.move(20, 20);
+      await page.waitForTimeout(300);
+    }
     await expect(other.locator(".shortcut-name")).toContainText([
       "MDN",
       "GitHub",
@@ -287,6 +412,7 @@ for (const channel of channels) {
       "data-ngs-quality",
       "low",
     );
+    await expect(page.locator(".app")).toHaveAttribute("data-quality", "low");
     await expect
       .poll(() =>
         page
@@ -324,6 +450,7 @@ for (const channel of channels) {
       "data-ngs-quality",
       "high",
     );
+    await expect(page.locator(".app")).toHaveAttribute("data-quality", "high");
     expect(await dialog.locator('[data-ngs-quality="low"]').count()).toBe(0);
     await expect(other.locator(".search-input")).toHaveAttribute(
       "data-ngs-quality",
@@ -456,8 +583,9 @@ for (const channel of channels) {
     await searchInput.press("Enter");
     expect(searchPage.url()).toContain(browser.id);
     await searchInput.dispatchEvent("compositionend");
-    // Intercept navigation only, leaving chrome.search itself real.
-    await searchPage.route(/^https?:\/\//, (route) =>
+    // Results open in a new tab, leaving the new tab page where it was. The
+    // route lives on the context so it also covers the tab that gets created.
+    await context.route(/^https?:\/\//, (route) =>
       route.fulfill({
         status: 200,
         contentType: "text/html",
@@ -465,11 +593,16 @@ for (const channel of channels) {
       }),
     );
     await searchInput.fill("nico impressionist test");
+    const openedTab = context.waitForEvent("page");
     await searchInput.press("Enter");
-    await searchPage.waitForURL(/^https?:\/\//);
-    expect(decodeURIComponent(searchPage.url()).replaceAll("+", " ")).toContain(
+    const resultTab = await openedTab;
+    await resultTab.waitForLoadState("domcontentloaded");
+    expect(decodeURIComponent(resultTab.url()).replaceAll("+", " ")).toContain(
       "nico impressionist test",
     );
+    expect(searchPage.url()).toContain(browser.id);
+    await resultTab.close();
+    await searchInput.fill("");
     await searchPage.close();
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(page.locator(".search-input")).toHaveAttribute(
@@ -491,6 +624,282 @@ for (const channel of channels) {
       "high",
     );
 
+    stage = "search engine switching";
+    console.log(channel, stage);
+    const engineUrl = `chrome-extension://${browser.id}/index.html`;
+    const storedEngine = (target) =>
+      target.evaluate(async () => {
+        const value = (await chrome.storage.local.get("nico.newtab.state.v1"))[
+          "nico.newtab.state.v1"
+        ];
+        return value.settings.searchEngine;
+      });
+    // A search must open a new tab and leave the new tab page untouched.
+    const searchFrom = async (origin, text) => {
+      const input = origin.locator(".search-input input");
+      await input.fill(text);
+      const opened = context.waitForEvent("page");
+      await input.press("Enter");
+      const tab = await opened;
+      await tab.waitForLoadState("domcontentloaded");
+      expect(origin.url()).toBe(engineUrl);
+      return tab;
+    };
+    // Every glass frame must be painted by the layer that moves — never left on
+    // the container, and never dropped.
+    const frameProblems = (target) =>
+      target.evaluate(() => {
+        const problems = [];
+        for (const container of document.querySelectorAll(".ngs-surface")) {
+          const motion = container.querySelector(":scope > .ngs-motion");
+          const name = container.className;
+          if (!motion) {
+            problems.push("no motion layer: " + name);
+            continue;
+          }
+          if (getComputedStyle(container).boxShadow !== "none")
+            problems.push("frame left on container: " + name);
+          if (
+            getComputedStyle(motion).boxShadow === "none" &&
+            !container.matches(
+              '.add-glass, .ngs-slider, [data-ngs-shape="glyph"]',
+            )
+          )
+            problems.push("frame lost: " + name);
+        }
+        return problems;
+      });
+    const enginePage = await context.newPage();
+    await enginePage.goto(engineUrl);
+    await expect(
+      enginePage.getByRole("button", { name: "添加常用网站" }),
+    ).toBeEnabled();
+    const enginePill = enginePage.getByRole("combobox", {
+      name: "选择搜索引擎",
+    });
+    expect(await frameProblems(enginePage)).toEqual([]);
+    await expect(enginePill).toContainText("默认");
+    await enginePill.click();
+    await expect(enginePage.locator(".ngs-select-option")).toContainText([
+      "默认",
+      "Google",
+      "Bing",
+      "百度",
+      "DuckDuckGo",
+    ]);
+    // Every row carries a brand mark next to its label — and the trigger shows
+    // it exactly once, since the label already includes the icon.
+    await expect(
+      enginePage.locator(".ngs-select-option .ngs-select-option-label svg"),
+    ).toHaveCount(5);
+    await expect(enginePill.locator(".engine-option svg")).toHaveCount(1);
+    // A floating list must not ride the elastic transform of its own glass.
+    await enginePage.locator(".ngs-select-option", { hasText: "Bing" }).click();
+    await expect(enginePill).toContainText("Bing");
+    await expect.poll(() => storedEngine(enginePage)).toBe("bing");
+    await enginePage.mouse.move(20, 20);
+    await enginePill.click();
+    const enginePopup = enginePage.locator(".ngs-select-popup");
+    await expect(enginePopup).toBeVisible();
+    const enginePopupBox = await enginePopup.boundingBox();
+    // The kit animates the inner .ngs-motion, so the frame must live on that
+    // layer — otherwise the container's shadow stays put while the glass and
+    // rows slide away. (Elasticity itself depends on the quality tier an
+    // earlier stage left behind, so it is asserted in styles.test.ts instead.)
+    await enginePage.mouse.move(
+      enginePopupBox.x + 40,
+      enginePopupBox.y + enginePopupBox.height - 4,
+    );
+    await enginePage.waitForTimeout(300);
+    await expect(enginePopup.locator("> .ngs-motion")).toHaveCSS(
+      "box-shadow",
+      /rgba\(0, 0, 0, 0\.28\)/,
+    );
+    await expect(enginePopup).toHaveCSS("box-shadow", "none");
+    await enginePage.keyboard.press("Escape");
+    await expect(enginePopup).toHaveCount(0);
+
+    await enginePage.route("https://api.bing.com/osjson.aspx*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "access-control-allow-origin": "*" },
+        body: '["nico",["suggestion one","suggestion two"]]',
+      }),
+    );
+    const engineInput = enginePage.locator(".search-input input");
+    await engineInput.fill("nico");
+    await expect(enginePage.locator(".search-suggestions")).toBeVisible();
+    await expect(enginePage.locator(".search-suggestion")).toHaveText([
+      "suggestion one",
+      "suggestion two",
+    ]);
+    await engineInput.press("ArrowDown");
+    await engineInput.press("ArrowDown");
+    await expect(enginePage.locator(".search-suggestion.is-active")).toHaveText(
+      "suggestion two",
+    );
+    await engineInput.press("Escape");
+    await expect(enginePage.locator(".search-suggestions")).toHaveCount(0);
+    // A single character is below the suggestion threshold.
+    await engineInput.fill("n");
+    await enginePage.waitForTimeout(600);
+    await expect(enginePage.locator(".search-suggestions")).toHaveCount(0);
+    await enginePage.close();
+
+    const bingPage = await context.newPage();
+    await bingPage.goto(engineUrl);
+    await expect(
+      bingPage.getByRole("button", { name: "添加常用网站" }),
+    ).toBeEnabled();
+    await bingPage.getByRole("combobox", { name: "选择搜索引擎" }).click();
+    await bingPage.locator(".ngs-select-option", { hasText: "Bing" }).click();
+    const bingTab = await searchFrom(bingPage, "nico engine test");
+    expect(bingTab.url()).toBe(
+      "https://www.bing.com/search?q=nico%20engine%20test",
+    );
+    await bingTab.close();
+    await bingPage.close();
+
+    const suggestionPage = await context.newPage();
+    await suggestionPage.route("https://api.bing.com/osjson.aspx*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "access-control-allow-origin": "*" },
+        body: '["nico",["suggestion one","suggestion two"]]',
+      }),
+    );
+    await suggestionPage.goto(engineUrl);
+    await expect(
+      suggestionPage.getByRole("button", { name: "添加常用网站" }),
+    ).toBeEnabled();
+    await suggestionPage
+      .getByRole("combobox", { name: "选择搜索引擎" })
+      .click();
+    await suggestionPage
+      .locator(".ngs-select-option", { hasText: "Bing" })
+      .click();
+    const suggestionInput = suggestionPage.locator(".search-input input");
+    await suggestionInput.fill("nico");
+    await expect(suggestionPage.locator(".search-suggestions")).toBeVisible();
+    await suggestionInput.press("ArrowDown");
+    await suggestionInput.press("ArrowDown");
+    // Enter on a highlighted row searches the suggestion, not the raw query.
+    const suggestionTab = context.waitForEvent("page");
+    await suggestionInput.press("Enter");
+    const suggestionResult = await suggestionTab;
+    await suggestionResult.waitForLoadState("domcontentloaded");
+    expect(suggestionResult.url()).toBe(
+      "https://www.bing.com/search?q=suggestion%20two",
+    );
+    expect(suggestionPage.url()).toBe(engineUrl);
+    await suggestionResult.close();
+    await suggestionPage.close();
+
+    stage = "custom search engines";
+    console.log(channel, stage);
+    await page.getByRole("button", { name: /个性化/ }).click();
+    await page.getByRole("dialog").waitFor();
+    await page
+      .locator(".settings-tabs .ngs-segment", { hasText: "外观" })
+      .click();
+    await expect(page.locator(".engine-empty")).toHaveText(
+      "还没有自定义搜索引擎。",
+    );
+    // The dialog's own surfaces must obey the same frame rule.
+    expect(await frameProblems(page)).toEqual([]);
+    await page.getByRole("button", { name: "添加搜索引擎" }).click();
+    await page.locator("#engine-name").fill("知乎");
+    await page.locator("#engine-url").fill("https://www.zhihu.com/search?q=%s");
+    await page.getByRole("button", { name: "保存引擎" }).click();
+    await expect(page.locator(".engine-card")).toHaveCount(1);
+    await expect(page.locator(".engine-card")).toContainText("知乎");
+    await expect(page.locator(".engine-card")).toContainText("www.zhihu.com");
+    // The card's actions end flush with its own padding edge, not mid-card.
+    expect(
+      await rightEdgeProblems(page, [
+        {
+          label: "engine card buttons",
+          control: ".engine-card .button-pair .ngs-btn:last-child",
+          reference: ".engine-card .ngs-content",
+          paddingInset: true,
+        },
+      ]),
+    ).toEqual([]);
+
+    // An address without a placeholder is rejected inline and changes nothing.
+    await page.getByRole("button", { name: "添加搜索引擎" }).click();
+    await page.locator("#engine-name").fill("坏引擎");
+    await page.locator("#engine-url").fill("https://example.com/");
+    await page.getByRole("button", { name: "保存引擎" }).click();
+    await expect(page.locator(".engine-editor .ngs-alert")).toContainText(
+      "%s 占位符",
+    );
+    await page
+      .locator(".engine-editor")
+      .getByRole("button", { name: "取消" })
+      .click();
+    await expect(page.locator(".engine-card")).toHaveCount(1);
+
+    // A second engine exercises the removal path without touching the
+    // selection, then the list is left with the engine in use.
+    await page.getByRole("button", { name: "添加搜索引擎" }).click();
+    await page.locator("#engine-name").fill("示例");
+    await page.locator("#engine-url").fill("example.com/s?q={query}");
+    await page.getByRole("button", { name: "保存引擎" }).click();
+    await expect(page.locator(".engine-card")).toHaveCount(2);
+    // The {query} alias is normalized to %s on save.
+    await expect(
+      page.locator(".engine-card", { hasText: "示例" }),
+    ).toContainText("example.com");
+    const spareCard = page.locator(".engine-card", { hasText: "示例" });
+    await spareCard.getByRole("button", { name: "移除" }).click();
+    await expect(page.locator(".engine-confirm")).toContainText(
+      "确定移除“示例”",
+    );
+    // The confirm button replaces 移除 under the cursor, and the elastic glass
+    // surface keeps chasing a resting pointer, so park the mouse first.
+    await page.mouse.move(20, 20);
+    await spareCard.getByRole("button", { name: "确认移除" }).click();
+    await expect(page.locator(".engine-card")).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    // The custom engine joins the picker, searches its own address, and never
+    // requests suggestions.
+    const customPill = page.getByRole("combobox", { name: "选择搜索引擎" });
+    await customPill.click();
+    await expect(page.locator(".ngs-select-option")).toHaveCount(6);
+    await page.locator(".ngs-select-option", { hasText: "知乎" }).click();
+    await expect(customPill).toContainText("知乎");
+    const builtInEngines = ["default", "google", "bing", "baidu", "duckduckgo"];
+    await expect
+      .poll(async () => builtInEngines.includes(await storedEngine(page)))
+      .toBe(false);
+    const typedRequests = [];
+    page.on("request", (request) => {
+      if (/^https?:/.test(request.url())) typedRequests.push(request.url());
+    });
+    await page.locator(".search-input input").fill("zhihu");
+    await page.waitForTimeout(700);
+    expect(typedRequests).toEqual([]);
+    await expect(page.locator(".search-suggestions")).toHaveCount(0);
+    await page.locator(".search-input input").fill("");
+
+    const customPage = await context.newPage();
+    await customPage.goto(engineUrl);
+    await expect(
+      customPage.getByRole("button", { name: "添加常用网站" }),
+    ).toBeEnabled();
+    await expect(customPage.locator(".search-engine")).toContainText("知乎");
+    const customTab = await searchFrom(customPage, "如何学习");
+    expect(customTab.url()).toBe(
+      "https://www.zhihu.com/search?q=%E5%A6%82%E4%BD%95%E5%AD%A6%E4%B9%A0",
+    );
+    await customTab.close();
+    await customPage.close();
+
     stage = "persistence after browser restart";
     await context.close();
     context = undefined;
@@ -508,6 +917,47 @@ for (const channel of channels) {
       "background-image",
       /blob:/,
     );
+    // The custom engine survived the restart and is still the active one.
+    await expect(reopened.locator(".search-engine")).toContainText("知乎");
+    expect(
+      await reopened.evaluate(async () => {
+        const value = (await chrome.storage.local.get("nico.newtab.state.v1"))[
+          "nico.newtab.state.v1"
+        ];
+        return value.settings.customEngines.map((engine) => engine.name);
+      }),
+    ).toEqual(["知乎"]);
+
+    stage = "removing the engine in use";
+    console.log(channel, stage);
+    await reopened.getByRole("button", { name: /个性化/ }).click();
+    await reopened.getByRole("dialog").waitFor();
+    await reopened
+      .locator(".settings-tabs .ngs-segment", { hasText: "外观" })
+      .click();
+    const inUseCard = reopened.locator(".engine-card", { hasText: "知乎" });
+    await inUseCard.getByRole("button", { name: "移除" }).click();
+    await expect(reopened.locator(".engine-confirm")).toContainText(
+      "回到浏览器默认引擎",
+    );
+    await reopened.mouse.move(20, 20);
+    await inUseCard.getByRole("button", { name: "确认移除" }).click();
+    await expect(reopened.locator(".engine-card")).toHaveCount(0);
+    await expect(reopened.locator(".engine-empty")).toBeVisible();
+    await reopened.keyboard.press("Escape");
+    await expect(reopened.getByRole("dialog")).toHaveCount(0);
+    // Deleting the selected engine falls back to the browser default in the
+    // same write, so the picker never dangles.
+    await expect(reopened.locator(".search-engine")).toContainText("默认");
+    expect(
+      await reopened.evaluate(async () => {
+        const value = (await chrome.storage.local.get("nico.newtab.state.v1"))[
+          "nico.newtab.state.v1"
+        ];
+        return value.settings.searchEngine;
+      }),
+    ).toBe("default");
+
     stage = "toolbar popup adds the current page";
     console.log(channel, stage);
     const popupOnly = await context.newPage();

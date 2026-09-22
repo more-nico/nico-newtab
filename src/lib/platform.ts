@@ -3,6 +3,7 @@ import {
   type AssetStorage,
   type StateStorage,
 } from "./persistence";
+import { DEFAULT_ENGINE_ID, buildSearchUrl } from "./engines";
 
 export const isExtension =
   typeof chrome !== "undefined" &&
@@ -115,14 +116,29 @@ export const repository = new Repository(
     ),
 );
 
-export async function search(text: string): Promise<void> {
+export interface SearchTarget {
+  id: string;
+  /** Absent means the browser's own default engine handles the query. */
+  urlTemplate?: string;
+}
+export async function search(
+  text: string,
+  target?: SearchTarget,
+): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
   if (!isExtension)
-    throw new Error(
-      "这是网页预览。在浏览器中加载扩展后，即可使用默认搜索引擎。",
-    );
-  await chrome.search.query({ text: trimmed, disposition: "CURRENT_TAB" });
+    throw new Error("这是网页预览。在浏览器中加载扩展后，即可使用搜索引擎。");
+  // Results open in a new tab so the new tab page stays where it was.
+  // chrome.search.query cannot target a specific engine, so only the browser
+  // default goes through it. Everything else opens the built URL.
+  if (!target?.urlTemplate || target.id === DEFAULT_ENGINE_ID) {
+    await chrome.search.query({ text: trimmed, disposition: "NEW_TAB" });
+    return;
+  }
+  await chrome.tabs.create({
+    url: buildSearchUrl(target.urlTemplate, trimmed),
+  });
 }
 export function favicon(url: string): string | undefined {
   if (!isExtension) return undefined;

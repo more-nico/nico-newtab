@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import type { GlassSurfaceProps } from "nico-glass-kit";
+import type { GlassSurfaceProps, OverLight } from "nico-glass-kit";
 import type { AppSettings } from "../types";
 
 export type GlassMaterialProps = Pick<
@@ -57,6 +57,11 @@ export function useGlassMaterialValue(
     () => createGlassMaterial(settings, reducedMotion),
     [settings.glass, reducedMotion],
   );
+}
+
+/** Maps the app's glass mode onto the kit's `overLight` prop. */
+export function glassOverLight(mode: AppSettings["glassMode"]): OverLight {
+  return mode === "auto" ? "auto" : mode === "light";
 }
 
 export function GlassMaterialProvider({

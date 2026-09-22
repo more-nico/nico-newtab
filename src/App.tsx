@@ -13,7 +13,10 @@ import {
   GlassInput,
   GlassLightGroup,
   GlassProvider,
+  GlassSelect,
   GlassSurface,
+  GlassText,
+  useOverLight,
 } from "nico-glass-kit";
 import {
   ArrowRight,
@@ -37,9 +40,33 @@ import {
   validateDecodedWallpaper,
 } from "./lib/images";
 import { loadFavicon, isExtension, repository, search } from "./lib/platform";
+import { listEngines, resolveEngine } from "./lib/engines";
+import { MIN_QUERY_LENGTH, fetchSuggestions } from "./lib/suggest";
 import { Settings, type SettingsTab } from "./components/Settings";
 import { ShortcutEditor } from "./components/ShortcutEditor";
-import { GlassMaterialProvider, useGlassMaterialValue } from "./lib/glass";
+import { ClearButton } from "./components/ClearButton";
+import { EngineIcon } from "./components/EngineIcon";
+import {
+  GlassMaterialProvider,
+  glassOverLight,
+  useGlassMaterialValue,
+} from "./lib/glass";
+
+/** How long typing settles before a suggestion request goes out. */
+const SUGGEST_DEBOUNCE_MS = 200;
+
+/**
+ * The clock is `GlassText`, so its glyphs are glass tiles shaped like the
+ * character rasters. The font is the playground TextDemo's input-preview
+ * letter font (`LETTER_FONT_FAMILY`); the size is one the layout can still
+ * breathe at on a phone.
+ */
+/**
+ * Sized from both axes: a 768px-tall window has almost no vertical slack once
+ * the search bar and the tiles are in, so width alone would overflow it.
+ */
+const CLOCK_SIZE = "clamp(80px, min(12.5vw, 20vh), 200px)";
+const CLOCK_FONT = '"Palatino Linotype", serif';
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(
@@ -52,6 +79,38 @@ function useReducedMotion() {
     return () => media.removeEventListener("change", update);
   }, []);
   return reduced;
+}
+
+/**
+ * Chrome builds the default drag image by rasterising the dragged element, but
+ * it cannot resolve the tile's `backdrop-filter` backdrop — the glass comes out
+ * as an opaque black box, and because the ghost is the whole tile it drags a
+ * second copy of the name (and the hover-revealed edit button) along with it.
+ * Hand the browser a plain stand-in instead: same size, a flat tint, the icon
+ * and nothing else.
+ *
+ * The node is parked under the cursor for a single task. It has to outlive the
+ * `dragstart` handler — the snapshot is taken once the handler returns — but
+ * anything longer would trail a second ghost behind the pointer.
+ */
+function buildDragGhost(tile: HTMLElement, x: number, y: number) {
+  const glass = tile.querySelector<HTMLElement>(".shortcut-glass");
+  if (!glass) return null;
+  const box = glass.getBoundingClientRect();
+  const ghost = document.createElement("div");
+  ghost.className = "drag-ghost";
+  ghost.style.width = `${box.width}px`;
+  ghost.style.height = `${box.height}px`;
+  // Mirror the live tile rather than restating the number, so the two cannot
+  // drift apart at the narrow breakpoint.
+  ghost.style.borderRadius = getComputedStyle(glass).borderRadius;
+  ghost.style.left = `${x - box.width / 2}px`;
+  ghost.style.top = `${y - box.height / 2}px`;
+  const icon = glass.querySelector(".site-icon, .site-letter");
+  if (icon) ghost.append(icon.cloneNode(true));
+  document.body.append(ghost);
+  setTimeout(() => ghost.remove(), 0);
+  return { ghost, width: box.width, height: box.height };
 }
 
 export default function App() {
@@ -69,9 +128,26 @@ export default function App() {
   const [now, setNow] = useState(() => new Date());
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  // Mirrors the composing ref so the suggestion effect can react to IME state.
+  const [composingState, setComposingState] = useState(false);
+  // Bumped when the field regains focus, so the list comes back without the
+  // user having to type another character.
+  const [suggestNonce, setSuggestNonce] = useState(0);
+  // TEMPORARY: set when a suggestion request is blocked (CSP / missing host
+  // permission), so the failure is visible instead of silent.
+  const [suggestBlocked, setSuggestBlocked] = useState(false);
   const composing = useRef(false);
+  const suggestAbort = useRef<AbortController | null>(null);
+  /** The query already handed to the engine, so it stops asking for suggestions. */
+  const submitted = useRef("");
+  const searchForm = useRef<HTMLFormElement>(null);
+  const pageShell = useRef<HTMLDivElement>(null);
   const dragged = useRef<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  /** Mirrors `dragged` so the tile being moved can style itself. */
+  const [dragging, setDragging] = useState<string | null>(null);
   const refreshVersion = useRef(0);
   const reduced = useReducedMotion();
   const s = state.settings;
@@ -95,6 +171,17 @@ export default function App() {
     highlightIntensity: material.base.highlightIntensity,
     elasticity: material.base.elasticity,
   };
+  const engines = useMemo(() => listEngines(s), [s.customEngines]);
+  const selectedEngine = useMemo(
+    () => resolveEngine(s),
+    [s.customEngines, s.searchEngine],
+  );
+  // The kit resolves `auto` by sampling the backdrop under each glass surface.
+  // The app's own text sits directly on the wallpaper rather than on glass, so
+  // it needs the same verdict — sample once under the page shell and drive both
+  // the provider and a `data-light` flag from it.
+  const overLight = glassOverLight(s.glassMode);
+  const pageLight = useOverLight(overLight, pageShell);
 
   const refresh = useCallback(async () => {
     const ticket = ++refreshVersion.current;
@@ -134,6 +221,58 @@ export default function App() {
     const timer = setTimeout(() => setNotice(""), 6500);
     return () => clearTimeout(timer);
   }, [notice]);
+  useEffect(() => {
+    suggestAbort.current?.abort();
+    setActiveIndex(-1);
+    const text = query.trim();
+    if (
+      modalOpen ||
+      searching ||
+      composingState ||
+      !selectedEngine.suggest ||
+      text.length < MIN_QUERY_LENGTH ||
+      // Already committed: the navigation is in flight, so asking for
+      // suggestions now would be a wasted request.
+      text === submitted.current
+    ) {
+      setSuggestions([]);
+      return;
+    }
+    const controller = new AbortController();
+    suggestAbort.current = controller;
+    const timer = setTimeout(() => {
+      void fetchSuggestions(selectedEngine.id, text, controller.signal).then(
+        (outcome) => {
+          if (controller.signal.aborted) return;
+          setSuggestions(outcome.items);
+          // TEMPORARY: surfaces a blocked/permission-less extension instead of
+          // failing silently. Remove once the reload path is verified.
+          if (outcome.error) setSuggestBlocked(true);
+        },
+      );
+    }, SUGGEST_DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    query,
+    modalOpen,
+    searching,
+    composingState,
+    suggestNonce,
+    selectedEngine.id,
+    selectedEngine.suggest,
+  ]);
+  useEffect(() => {
+    if (suggestions.length === 0) return;
+    const dismiss = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (target && !searchForm.current?.contains(target)) setSuggestions([]);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [suggestions.length]);
   useEffect(() => {
     let cancelled = false;
     let url: string | undefined;
@@ -278,18 +417,25 @@ export default function App() {
       next.settings.customWallpaper.assetId = crypto.randomUUID();
     await mutate(() => repository.replace(() => next, blob));
   }
-  async function saveShortcut(name: string, url: string) {
+  async function saveShortcut(name: string, url: string, iconDataUrl: string) {
     await mutate(() =>
       repository.update((current) => {
         if (editor === "new") {
           if (current.shortcuts.length >= 200)
             throw new Error("最多可添加 200 个网站。");
-          current.shortcuts.push({ id: crypto.randomUUID(), name, url });
+          current.shortcuts.push({
+            id: crypto.randomUUID(),
+            name,
+            url,
+            ...(iconDataUrl ? { iconDataUrl } : {}),
+          });
         } else {
           const item = current.shortcuts.find((item) => item.id === editor);
           if (!item) throw new Error("这个网站已在其他标签页中移除。");
           item.name = name;
           item.url = url;
+          if (iconDataUrl) item.iconDataUrl = iconDataUrl;
+          else delete item.iconDataUrl;
         }
         return current;
       }),
@@ -318,17 +464,33 @@ export default function App() {
       }),
     );
   }
-  async function submitSearch(event: FormEvent) {
-    event.preventDefault();
-    if (composing.current || !query.trim() || searching) return;
+  function clearSuggestions() {
+    suggestAbort.current?.abort();
+    setSuggestions([]);
+    setActiveIndex(-1);
+  }
+  async function runSearch(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || searching) return;
+    clearSuggestions();
+    submitted.current = trimmed;
     setSearching(true);
     try {
-      await search(query);
+      await search(trimmed, selectedEngine);
     } catch (e) {
       setNotice(e instanceof Error ? e.message : "搜索暂时不可用，请重试。");
     } finally {
       setSearching(false);
     }
+  }
+  async function submitSearch(event: FormEvent) {
+    event.preventDefault();
+    if (composing.current) return;
+    await runSearch(query);
+  }
+  function chooseSuggestion(text: string) {
+    setQuery(text);
+    void runSearch(text);
   }
   const hours = now.getHours();
   const greeting =
@@ -358,11 +520,15 @@ export default function App() {
   return (
     <GlassProvider
       quality={reduced ? "low" : s.quality}
-      overLight="auto"
+      overLight={overLight}
       lensMapRasterScale={s.glass.mapScale}
     >
       <GlassMaterialProvider value={material}>
-        <div className={`app ${reduced ? "reduced-motion" : ""}`}>
+        <div
+          className={`app ${reduced ? "reduced-motion" : ""}`}
+          data-light={pageLight}
+          data-quality={reduced ? "low" : s.quality}
+        >
           <div className="wallpaper-base" />
           <div
             className={`wallpaper ${background ? "is-loaded" : ""}`}
@@ -380,7 +546,7 @@ export default function App() {
             }
           />
           <div className="wallpaper-shade" />
-          <div className="page-shell" inert={modalOpen}>
+          <div className="page-shell" ref={pageShell} inert={modalOpen}>
             <header className="page-header">
               <div className="brand" aria-label="Nico 新标签页">
                 <span className="brand-wordmark">
@@ -390,7 +556,6 @@ export default function App() {
                 <span className="brand-caption">每一页，都是新的风景</span>
               </div>
               <GlassButton
-                overLight={false}
                 className="gallery-button"
                 size="sm"
                 optics={glassOptics}
@@ -407,7 +572,16 @@ export default function App() {
                 <p className="greeting">{greeting}</p>
                 <div className="time-line">
                   <time className="clock" dateTime={now.toISOString()}>
-                    {clock}
+                    <GlassText
+                      text={clock}
+                      fontSize={CLOCK_SIZE}
+                      fontFamily={CLOCK_FONT}
+                      fontWeight={600}
+                      letterSpacing={-2}
+                      tabularNums
+                      optics={glassOptics}
+                      {...glassInteraction}
+                    />
                   </time>
                   {period && <span className="day-period">{period}</span>}
                 </div>
@@ -417,8 +591,42 @@ export default function App() {
                 <form
                   className="search-form"
                   role="search"
+                  ref={searchForm}
                   onSubmit={(event) => void submitSearch(event)}
                 >
+                  <GlassSelect
+                    className="search-engine"
+                    size="lg"
+                    cornerRadius={26}
+                    aria-label="选择搜索引擎"
+                    disabled={!ready}
+                    value={selectedEngine.id}
+                    onChange={(key) => {
+                      clearSuggestions();
+                      setSuggestBlocked(false);
+                      void changeSettings({ searchEngine: key }).catch((e) =>
+                        setNotice(
+                          e instanceof Error ? e.message : "引擎保存失败。",
+                        ),
+                      );
+                    }}
+                    onFocus={clearSuggestions}
+                    // The label already carries the icon, so no `leading` here —
+                    // that would show it twice in the trigger.
+                    items={engines.map((engine) => ({
+                      key: engine.id,
+                      label: (
+                        <span className="engine-option">
+                          <EngineIcon engine={engine} size={16} />
+                          <span className="engine-option-name">
+                            {engine.name}
+                          </span>
+                        </span>
+                      ),
+                    }))}
+                    optics={searchOptics}
+                    {...glassInteraction}
+                  />
                   <GlassInput
                     className="search-input"
                     size="lg"
@@ -427,36 +635,142 @@ export default function App() {
                     aria-label="搜索"
                     placeholder="搜索，让好奇心带路"
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                      // Editing releases the committed query again.
+                      submitted.current = "";
+                      setQuery(e.target.value);
+                    }}
+                    // Returning to the field re-asks for suggestions, so clicking
+                    // the engine pill and back does not leave the list empty.
+                    onFocus={() => setSuggestNonce((n) => n + 1)}
                     autoComplete="off"
                     spellCheck={false}
                     maxLength={2000}
+                    aria-autocomplete="list"
+                    aria-controls={
+                      suggestions.length > 0 ? "search-suggestions" : undefined
+                    }
+                    aria-activedescendant={
+                      activeIndex >= 0
+                        ? `search-suggestion-${activeIndex}`
+                        : undefined
+                    }
                     onCompositionStart={() => {
                       composing.current = true;
+                      setComposingState(true);
                     }}
                     onCompositionEnd={() => {
                       composing.current = false;
+                      setComposingState(false);
+                    }}
+                    // An interrupted composition can skip `compositionend`, which
+                    // would otherwise suppress suggestions for the rest of the
+                    // session. Blurring always clears it.
+                    onBlur={() => {
+                      composing.current = false;
+                      setComposingState(false);
                     }}
                     onKeyDown={(e) => {
                       if (
                         e.key === "Enter" &&
                         (e.nativeEvent.isComposing || e.keyCode === 229)
-                      )
+                      ) {
                         e.preventDefault();
+                        return;
+                      }
+                      // While composing, arrows belong to the IME candidate list.
+                      if (composing.current || suggestions.length === 0) return;
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setActiveIndex((i) => (i + 1) % suggestions.length);
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setActiveIndex(
+                          (i) =>
+                            (i - 1 + suggestions.length) % suggestions.length,
+                        );
+                      } else if (e.key === "Escape") {
+                        e.preventDefault();
+                        clearSuggestions();
+                      } else if (e.key === "Enter" && activeIndex >= 0) {
+                        // A highlighted suggestion wins over the raw query.
+                        e.preventDefault();
+                        chooseSuggestion(suggestions[activeIndex]);
+                      }
                     }}
                     trailing={
-                      <button
-                        className="search-submit"
-                        type="submit"
-                        aria-label="开始搜索"
-                        disabled={searching || !query.trim()}
-                      >
-                        <ArrowRight size={19} strokeWidth={1.6} />
-                      </button>
+                      <>
+                        {query && (
+                          <ClearButton
+                            label="清空搜索"
+                            onClear={() => {
+                              submitted.current = "";
+                              clearSuggestions();
+                              setQuery("");
+                            }}
+                          />
+                        )}
+                        <button
+                          className="search-submit"
+                          type="submit"
+                          aria-label="开始搜索"
+                          disabled={searching || !query.trim()}
+                        >
+                          <ArrowRight size={19} strokeWidth={1.6} />
+                        </button>
+                      </>
                     }
                     optics={searchOptics}
                     {...glassInteraction}
                   />
+                  {suggestions.length > 0 && (
+                    <GlassSurface
+                      id="search-suggestions"
+                      className="search-suggestions"
+                      cornerRadius={26}
+                      role="listbox"
+                      aria-label="搜索建议"
+                      optics={searchOptics}
+                      {...glassInteraction}
+                    >
+                      <div className="search-suggestions-list">
+                        {suggestions.map((item, index) => (
+                          <button
+                            key={item}
+                            type="button"
+                            role="option"
+                            id={`search-suggestion-${index}`}
+                            aria-selected={index === activeIndex}
+                            className={`search-suggestion${index === activeIndex ? " is-active" : ""}`}
+                            // Keeps the input focused so the list survives the click.
+                            onMouseDown={(event) => event.preventDefault()}
+                            onMouseEnter={() => setActiveIndex(index)}
+                            onClick={() => chooseSuggestion(item)}
+                          >
+                            <Search
+                              size={14}
+                              strokeWidth={1.6}
+                              className="search-suggestion-icon"
+                            />
+                            <span className="search-suggestion-text">
+                              {item}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </GlassSurface>
+                  )}
+                  {/* TEMPORARY: makes a blocked suggestion request visible.
+                      aria-live rather than role="status" so it never collides
+                      with the notice toast's live region. */}
+                  {suggestBlocked &&
+                    selectedEngine.suggest &&
+                    suggestions.length === 0 && (
+                      <p className="search-suggest-error" aria-live="polite">
+                        搜索建议不可用：请到 chrome://extensions
+                        重新加载扩展，然后新开一个标签页。
+                      </p>
+                    )}
                 </form>
                 <section
                   className={`shortcuts-section ${managing ? "is-managing" : ""}`}
@@ -491,15 +805,30 @@ export default function App() {
                     {state.shortcuts.map((item) => (
                       <div
                         key={item.id}
-                        className={`shortcut-item ${dragOver === item.id ? "drag-over" : ""}`}
+                        className={`shortcut-item ${
+                          dragOver === item.id ? "drag-over" : ""
+                        } ${dragging === item.id ? "is-dragging" : ""}`}
                         draggable={ready}
                         onDragStart={(event) => {
                           dragged.current = item.id;
+                          setDragging(item.id);
                           event.dataTransfer.effectAllowed = "move";
                           event.dataTransfer.setData("text/plain", item.id);
+                          const ghost = buildDragGhost(
+                            event.currentTarget,
+                            event.clientX,
+                            event.clientY,
+                          );
+                          if (ghost)
+                            event.dataTransfer.setDragImage(
+                              ghost.ghost,
+                              ghost.width / 2,
+                              ghost.height / 2,
+                            );
                         }}
                         onDragEnd={() => {
                           dragged.current = null;
+                          setDragging(null);
                           setDragOver(null);
                         }}
                         onDragOver={(event) => {
@@ -523,6 +852,10 @@ export default function App() {
                           href={item.url}
                           className="shortcut-link"
                           draggable={false}
+                          // Keep the new tab page where it is: a shortcut
+                          // opens beside it rather than replacing it.
+                          target="_blank"
+                          rel="noopener noreferrer"
                           onClick={(event) => {
                             if (managing) {
                               event.preventDefault();
@@ -650,7 +983,6 @@ export default function App() {
               </span>
               <GlassButton
                 className="settings-button"
-                overLight={false}
                 size="sm"
                 icon={<Settings2 size={17} strokeWidth={1.5} />}
                 optics={glassOptics}
@@ -727,6 +1059,12 @@ function SiteIcon({ item }: { item: Shortcut }) {
   useEffect(() => {
     let cancelled = false;
     let objectUrl: string | undefined;
+    // A user-chosen icon wins over whatever the site publishes.
+    if (item.iconDataUrl) {
+      setFailed(false);
+      setSrc(item.iconDataUrl);
+      return;
+    }
     setFailed(false);
     setSrc(null);
     void loadFavicon(item.url)
@@ -742,7 +1080,7 @@ function SiteIcon({ item }: { item: Shortcut }) {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [item.url]);
+  }, [item.url, item.iconDataUrl]);
   return src && !failed ? (
     <img
       className="site-icon"

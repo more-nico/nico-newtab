@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "lucide-react": "^0.577.0",
-    "nico-glass-kit": "^0.3.1",
+    "nico-glass-kit": "^0.3.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

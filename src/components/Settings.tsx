@@ -513,6 +513,19 @@ export function Settings({
                     {...base}
                   />
                 </div>
+                <div className="clock-tint-control">
+                  <Range
+                    label="时钟 Tint 强度"
+                    value={settings.clockTintStrength * 100}
+                    min={0}
+                    max={100}
+                    step={1}
+                    format={(value) => `${value}%`}
+                    onChange={(value) =>
+                      change({ clockTintStrength: value / 100 })
+                    }
+                  />
+                </div>
                 <div className="optics-subheading">
                   <span>搜索引擎</span>
                   <small>自定义搜索地址；自定义引擎不提供搜索建议</small>

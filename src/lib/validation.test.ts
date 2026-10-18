@@ -42,6 +42,20 @@ const backup = () => ({
 describe("backup validation", () => {
   it("round-trips a built-in wallpaper backup", () =>
     expect(parseBackup(JSON.stringify(backup()))).toEqual(backup()));
+  it("preserves clock tint strength and defaults it for older backups", () => {
+    const current = backup();
+    current.state.settings.clockTintStrength = 0.37;
+    expect(
+      parseBackup(JSON.stringify(current)).state.settings.clockTintStrength,
+    ).toBe(0.37);
+
+    const older = backup();
+    delete (older.state.settings as Partial<typeof older.state.settings>)
+      .clockTintStrength;
+    expect(
+      parseBackup(JSON.stringify(older)).state.settings.clockTintStrength,
+    ).toBe(0.1);
+  });
   it("rejects unknown versions and malformed JSON", () => {
     expect(() => parseBackup("{")).toThrow();
     expect(() =>
@@ -116,6 +130,25 @@ describe("backup validation", () => {
     delete (data.settings as Partial<typeof data.settings>).glass;
     expect(parseState(data).settings.glass).toEqual(DEFAULT_GLASS_SETTINGS);
   });
+  it("defaults clock tint strength and accepts the full slider range", () => {
+    expect(defaultState().settings.clockTintStrength).toBe(0.1);
+    const data = defaultState();
+    delete (data.settings as Partial<typeof data.settings>).clockTintStrength;
+    expect(parseState(data).settings.clockTintStrength).toBe(0.1);
+
+    for (const value of [0, 1]) {
+      data.settings.clockTintStrength = value;
+      expect(parseState(data).settings.clockTintStrength).toBe(value);
+    }
+  });
+  it.each([-0.01, 1.01, Number.NaN, "0.1", null])(
+    "rejects invalid clock tint strength %s",
+    (value) => {
+      const data = defaultState();
+      Object.assign(data.settings, { clockTintStrength: value });
+      expect(() => parseState(data)).toThrow();
+    },
+  );
   it("folds the retired medium tier into high and rejects unknown tiers", () => {
     const data = defaultState();
     const tier = (value: string) => {

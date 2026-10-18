@@ -1097,6 +1097,16 @@ button:disabled {
   color: var(--ngs-text-dim);
   margin-top: 4px;
 }
+.clock-tint-control {
+  padding: 16px 0 20px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+.clock-tint-control .range-setting {
+  padding-top: 0;
+}
+.clock-tint-control .range-setting .ngs-slider {
+  width: 100%;
+}
 .ngs-segmented {
   flex-shrink: 0;
 }

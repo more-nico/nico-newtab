@@ -47,6 +47,8 @@ export interface AppSettings {
   /** Light/dark behaviour of the glass. */
   glassMode: GlassMode;
   clockFormat: "12" | "24";
+  /** White tint strength applied to the clock's glass glyphs (0–1). */
+  clockTintStrength: number;
   /** Selected engine: a built-in id or a customEngines[].id. */
   searchEngine: string;
   /** User-defined engines. Custom engines never offer suggestions. */

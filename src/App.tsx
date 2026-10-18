@@ -10,6 +10,7 @@ import {
 import {
   GlassAlert,
   GlassButton,
+  GlassElasticityGroup,
   GlassInput,
   GlassLightGroup,
   GlassProvider,
@@ -155,6 +156,14 @@ export default function App() {
   const modalOpen = settingsTab !== null || editor !== null;
   const material = useGlassMaterialValue(s, reduced);
   const glassOptics = material.base.optics!;
+  const clockOptics = useMemo(
+    () => ({
+      ...glassOptics,
+      tint: "rgb(255 255 255)",
+      tintStrength: s.clockTintStrength,
+    }),
+    [glassOptics, s.clockTintStrength],
+  );
   const searchOptics = useMemo(
     () => ({ ...glassOptics, tintStrength: 0.24 }),
     [glassOptics],
@@ -572,16 +581,20 @@ export default function App() {
                 <p className="greeting">{greeting}</p>
                 <div className="time-line">
                   <time className="clock" dateTime={now.toISOString()}>
-                    <GlassText
-                      text={clock}
-                      fontSize={CLOCK_SIZE}
-                      fontFamily={CLOCK_FONT}
-                      fontWeight={600}
-                      letterSpacing={-2}
-                      tabularNums
-                      optics={glassOptics}
-                      {...glassInteraction}
-                    />
+                    <GlassElasticityGroup
+                      elasticity={glassInteraction.elasticity}
+                    >
+                      <GlassText
+                        text={clock}
+                        fontSize={CLOCK_SIZE}
+                        fontFamily={CLOCK_FONT}
+                        fontWeight={600}
+                        letterSpacing={-2}
+                        tabularNums
+                        optics={clockOptics}
+                        {...glassInteraction}
+                      />
+                    </GlassElasticityGroup>
                   </time>
                   {period && <span className="day-period">{period}</span>}
                 </div>

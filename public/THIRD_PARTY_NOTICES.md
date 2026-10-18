@@ -40,7 +40,7 @@
 
 ## 随扩展分发的软件
 
-### nico-glass-kit 0.3.1
+### nico-glass-kit 0.3.2
 
 MIT License
 

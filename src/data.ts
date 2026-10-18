@@ -70,6 +70,7 @@ export function defaultState(): AppState {
       quality: "high",
       glassMode: "auto",
       clockFormat: "24",
+      clockTintStrength: 0.1,
       searchEngine: "default",
       customEngines: [],
     },

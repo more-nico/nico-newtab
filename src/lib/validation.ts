@@ -98,11 +98,14 @@ export function parseState(value: unknown): AppState {
   // the exact playground defaults on the next successful save. The retired
   // "medium" tier is folded into "high" so older saves keep their material.
   const glass = s.glass === undefined ? DEFAULT_GLASS_SETTINGS : s.glass;
+  const clockTintStrength =
+    s.clockTintStrength === undefined ? 0.1 : s.clockTintStrength;
   const quality: AppState["settings"]["quality"] =
     s.quality === "low" ? "low" : "high";
   if (
     !(s.fit === "cover" || s.fit === "contain") ||
     !(s.clockFormat === "12" || s.clockFormat === "24") ||
+    !within(clockTintStrength, 0, 1) ||
     typeof s.quality !== "string" ||
     !["low", "medium", "high"].includes(s.quality) ||
     !within(s.brightness, 35, 120) ||
@@ -226,6 +229,7 @@ export function parseState(value: unknown): AppState {
       quality,
       glassMode,
       clockFormat: s.clockFormat,
+      clockTintStrength,
       searchEngine,
       customEngines,
     },

@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 
 let text = "# Nico Newtab · 第三方素材与开源许可\n\n";
 text +=
@@ -14,7 +14,19 @@ for (const image of images) {
 text +=
   "逐张原始下载地址与元数据见 wallpapers/sources.json。扩展运行时不请求这些外部图片。\n\n";
 text +=
-  "## 字体与图标\n\n界面使用操作系统已有字体，不分发商业字体文件。Nico 图标为本项目原创 SVG 图形的 PNG 导出。界面线条图标来自 Lucide。\n\n";
+  "## 字体与图标\n\n界面使用操作系统已有字体；Nico logo 的 SVG 中内嵌了一款 SIL Open Font License 花体字（许可证全文见下）。Nico 图标为本项目原创 SVG 图形的 PNG 导出。界面线条图标来自 Lucide。\n\n";
+// Bundle any font licenses that ship with the handwritten logo assets.
+for (const directory of ["assets/fonts"]) {
+  let entries = [];
+  try {
+    entries = await readdir(directory);
+  } catch {
+    continue;
+  }
+  for (const entry of entries.filter((name) => /ofl|license/i.test(name))) {
+    text += `### ${entry}\n\n${await readFile(`${directory}/${entry}`, "utf8")}\n\n`;
+  }
+}
 text +=
   "搜索引擎选择器内嵌各引擎的官方标识（Google、Microsoft Bing、Baidu、DuckDuckGo），矢量路径取自 Simple Icons（CC0-1.0）与 Iconify 的 logos 图标集。这些标识是其各自所有者的商标，在此仅用于指明所选的搜索引擎，不表示任何形式的合作或背书。\n\n";
 text += "## 随扩展分发的软件\n\n";

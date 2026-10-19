@@ -10,6 +10,7 @@ const ctx = await chromium.launchPersistentContext(
     channel: "chrome",
     headless: true,
     viewport: { width: 1366, height: 768 },
+    locale: "zh-CN",
     args: ["--enable-unsafe-extension-debugging"],
     ignoreDefaultArgs: ["--disable-extensions"],
   },
@@ -80,7 +81,10 @@ try {
   // 3. Add it, then confirm the new tab page picked it up.
   await popup.getByRole("button", { name: "添加" }).click();
   await popup.waitForTimeout(700);
-  console.log("after add:", JSON.stringify(await popup.locator("body").innerText()));
+  console.log(
+    "after add:",
+    JSON.stringify(await popup.locator("body").innerText()),
+  );
   await popup.screenshot({ path: "test-results/popup-saved.png" });
 
   const home = await ctx.newPage();
@@ -88,9 +92,7 @@ try {
   await home.waitForTimeout(1200);
   console.log(
     "shortcut visible on the new tab page:",
-    await home
-      .locator(".shortcut-name")
-      .allInnerTexts(),
+    await home.locator(".shortcut-name").allInnerTexts(),
   );
   console.log(
     "stored:",
@@ -122,7 +124,10 @@ try {
     "duplicate state:",
     JSON.stringify(await again.locator("body").innerText()),
   );
-  console.log("add disabled:", await again.getByRole("button", { name: "添加" }).isDisabled());
+  console.log(
+    "add disabled:",
+    await again.getByRole("button", { name: "添加" }).isDisabled(),
+  );
 } finally {
   await ctx.close();
 }

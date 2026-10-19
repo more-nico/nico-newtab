@@ -1,5 +1,7 @@
 /** Suggestion lookups stay quiet: every failure resolves to an empty list. */
 
+import { t } from "./i18n";
+
 export const MIN_QUERY_LENGTH = 2;
 export const MAX_SUGGESTIONS = 8;
 export const MAX_SUGGESTION_LENGTH = 120;
@@ -222,10 +224,7 @@ export async function fetchSuggestions(
   } catch (e) {
     // Cancelling our own request is routine, not a fault.
     if (!controller.signal.aborted)
-      console.warn(
-        `[nico] 搜索建议请求失败（${engineId}）。若是 "violates the following Content Security Policy directive: connect-src"，说明当前加载的扩展 manifest 是旧的，需要在 chrome://extensions 重新加载扩展并新开标签页。`,
-        e,
-      );
+      console.warn(t().lib.suggest.requestFailed(engineId), e);
     return { items: [], error: !controller.signal.aborted };
   } finally {
     clearTimeout(timer);

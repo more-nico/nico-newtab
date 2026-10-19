@@ -1,14 +1,22 @@
 /**
- * Nutstore (坚果云) WebDAV transport.
+ * Nutstore WebDAV transport.
  *
  * Pure `fetch` client: it never touches the DOM, so the whole module can be
  * unit tested in Node with a stubbed global `fetch`. Error messages are
- * user-facing Chinese strings and can be rendered as-is.
+ * user-facing and localized at throw time.
  */
 
-/** 坚果云官方 WebDAV 根地址（来自坚果云帮助中心“第三方应用授权”）。 */
+import { t } from "./i18n";
+
+/**
+ * Error copy for the active locale. Resolved per call, never at module load:
+ * locale detection runs after the modules are imported.
+ */
+const messages = () => t().sync.errors;
+
+/** Official Nutstore WebDAV root (from the Nutstore help center). */
 export const NUTSTORE_SERVER_URL = "https://dav.jianguoyun.com/dav";
-/** 帮助中心：如何生成第三方应用密码。 */
+/** Help center: how to generate a third-party app password. */
 export const NUTSTORE_MANUAL_URL = "https://help.jianguoyun.com/?p=2064";
 
 /** Every WebDAV request gives up after 30 seconds. */
@@ -20,11 +28,11 @@ const MAX_REMOTE_SEGMENT_LENGTH = 64;
 export interface NutstoreCredentials {
   /** E.g. https://dav.jianguoyun.com/dav */
   serverUrl: string;
-  /** 坚果云账号（邮箱）. */
+  /** Nutstore account (email). */
   username: string;
-  /** 第三方应用密码，不是登录密码. */
+  /** Third-party app password, not the login password. */
   password: string;
-  /** 同步目录，例如 nico-newtab（可多级，不能为空）. */
+  /** Sync folder, e.g. nico-newtab (may be nested, must not be empty). */
   remoteDir: string;
 }
 
@@ -37,7 +45,7 @@ export type NutstoreErrorCode =
   | "network"
   | "server";
 
-/** 面向用户的中文错误。message 可直接展示。 */
+/** User-facing error. The message can be rendered as-is. */
 export class NutstoreError extends Error {
   constructor(
     message: string,
@@ -49,42 +57,26 @@ export class NutstoreError extends Error {
   }
 }
 
-const AUTH_MESSAGE =
-  "坚果云账号或应用密码不正确。请在坚果云网页端 → 账户信息 → 安全选项 → 第三方应用管理 生成应用密码后重试。";
-const FORBIDDEN_MESSAGE = "坚果云拒绝了这次请求，请确认账号已开通 WebDAV。";
-const RATE_LIMIT_MESSAGE = "坚果云请求过于频繁，请稍后再试。";
-const CONFLICT_MESSAGE = "云端备份已被其他设备修改，请重新同步。";
-const QUOTA_MESSAGE = "坚果云空间不足，无法上传备份。";
-const NOT_FOUND_MESSAGE =
-  "WebDAV 地址不可用，请检查服务器地址与同步目录是否正确。";
-const NETWORK_MESSAGE = "无法连接坚果云，请检查网络或服务器地址。";
-const serverMessage = (status: number) =>
-  `坚果云暂时不可用（HTTP ${status}），请稍后重试。`;
-const rejectedMessage = (status: number) =>
-  `坚果云拒绝了这次请求（HTTP ${status}），请检查服务器地址与同步目录是否正确。`;
-
 /** Maps an unexpected HTTP status to the user-facing error taxonomy. */
 function statusError(response: Response): NutstoreError {
   const { status } = response;
-  if (status === 401) return new NutstoreError(AUTH_MESSAGE, "auth", status);
-  if (status === 403)
-    return new NutstoreError(FORBIDDEN_MESSAGE, "auth", status);
-  if (status === 404)
-    return new NutstoreError(NOT_FOUND_MESSAGE, "config", status);
-  if (status === 412)
-    return new NutstoreError(CONFLICT_MESSAGE, "conflict", status);
+  const m = messages();
+  if (status === 401) return new NutstoreError(m.auth, "auth", status);
+  if (status === 403) return new NutstoreError(m.forbidden, "auth", status);
+  if (status === 404) return new NutstoreError(m.notFound, "config", status);
+  if (status === 412) return new NutstoreError(m.conflict, "conflict", status);
   // 429 and 503 are the throttling answers Nutstore is known to send. Keep this
   // branch before the generic 5xx branch.
   if (status === 429 || status === 503)
     return new NutstoreError(
-      `${RATE_LIMIT_MESSAGE}${retryAfterSuffix(response)}`,
+      `${m.rateLimit}${retryAfterSuffix(response)}`,
       "rate-limit",
       status,
     );
-  if (status === 507) return new NutstoreError(QUOTA_MESSAGE, "quota", status);
+  if (status === 507) return new NutstoreError(m.quota, "quota", status);
   if (status >= 500)
-    return new NutstoreError(serverMessage(status), "server", status);
-  return new NutstoreError(rejectedMessage(status), "config", status);
+    return new NutstoreError(m.server(status), "server", status);
+  return new NutstoreError(m.rejected(status), "config", status);
 }
 
 /** Appends the server's suggested wait to a throttling message when numeric. */
@@ -93,68 +85,60 @@ function retryAfterSuffix(response: Response): string {
   if (!header) return "";
   const seconds = Number(header);
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 3600) return "";
-  return `建议等待约 ${Math.ceil(seconds)} 秒。`;
+  return messages().retryAfter(Math.ceil(seconds));
 }
 
-/** 校验并规范化服务器地址：仅 http/https；去尾部斜杠；http 只允许 localhost/127.0.0.1。 */
+/** Validates and normalizes the server address: http/https only, no trailing slash; plain http only for localhost/127.0.0.1. */
 export function normalizeServerUrl(input: string): string {
+  const m = messages();
   const value = typeof input === "string" ? input.trim() : "";
   if (!value || value.length > MAX_SERVER_URL_LENGTH)
-    throw new NutstoreError(
-      "服务器地址不能为空，且不超过 2048 个字符。",
-      "config",
-    );
+    throw new NutstoreError(m.serverUrlEmpty, "config");
   let url: URL;
   try {
     url = new URL(value);
   } catch {
-    throw new NutstoreError(
-      "服务器地址格式不正确，请填写完整的 WebDAV 地址。",
-      "config",
-    );
+    throw new NutstoreError(m.serverUrlInvalid, "config");
   }
   if (url.protocol !== "http:" && url.protocol !== "https:")
-    throw new NutstoreError("服务器地址仅支持 HTTP 或 HTTPS。", "config");
+    throw new NutstoreError(m.serverUrlProtocol, "config");
   if (url.username || url.password)
-    throw new NutstoreError("服务器地址不能包含账号和密码。", "config");
+    throw new NutstoreError(m.serverUrlCredentials, "config");
   if (url.search || url.hash)
-    throw new NutstoreError("服务器地址不能包含查询参数或锚点。", "config");
+    throw new NutstoreError(m.serverUrlQuery, "config");
   // Plain HTTP is only tolerated for the local mock server used in development.
   if (
     url.protocol === "http:" &&
     url.hostname !== "localhost" &&
     url.hostname !== "127.0.0.1"
   )
-    throw new NutstoreError(
-      "出于安全考虑，HTTP 地址只允许本机（localhost / 127.0.0.1）测试使用。",
-      "config",
-    );
+    throw new NutstoreError(m.serverUrlInsecure, "config");
   return url.href.replace(/\/+$/, "");
 }
 
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
 
-/** 校验并规范化同步目录：去首尾斜杠，按 / 分段，每段 1–64 字符，禁止 `.` `..` 和控制字符，总长 ≤200。 */
+/** Validates and normalizes the sync folder: strips slashes, splits on /, 1–64 chars per segment, no `.`/`..`/control chars, total ≤200. */
 export function normalizeRemoteDir(input: string): string {
+  const m = messages();
   const value =
     typeof input === "string" ? input.trim().replace(/^\/+|\/+$/g, "") : "";
-  if (!value)
-    throw new NutstoreError("同步目录不能为空，例如 nico-newtab。", "config");
+  if (!value) throw new NutstoreError(m.remoteDirEmpty, "config");
   if (value.length > MAX_REMOTE_DIR_LENGTH)
-    throw new NutstoreError("同步目录过长，最多 200 个字符。", "config");
+    throw new NutstoreError(m.remoteDirTooLong, "config");
   const segments = value.split("/");
   for (const segment of segments) {
     if (!segment || segment.length > MAX_REMOTE_SEGMENT_LENGTH)
-      throw new NutstoreError("同步目录的每一级需为 1–64 个字符。", "config");
+      throw new NutstoreError(m.remoteDirSegment, "config");
     if (segment === "." || segment === "..")
-      throw new NutstoreError("同步目录不能使用 . 或 .. 相对路径。", "config");
+      throw new NutstoreError(m.remoteDirRelative, "config");
     if (CONTROL_CHARACTERS.test(segment))
-      throw new NutstoreError("同步目录不能包含控制字符。", "config");
+      throw new NutstoreError(m.remoteDirControl, "config");
   }
   return segments.join("/");
 }
 
-/** Basic 认证头，按 UTF-8 编码（账号可能是中文邮箱/密码含特殊字符）。 */
+/** Basic auth header, UTF-8 encoded (accounts may be Chinese emails or passwords may contain special characters). */
 export function authHeader(username: string, password: string): string {
   const bytes = new TextEncoder().encode(`${username}:${password}`);
   let binary = "";
@@ -181,13 +165,13 @@ function directoryLevelUrls(credentials: NutstoreCredentials): string[] {
   );
 }
 
-/** 目录 URL（末尾带 /）。 */
+/** Directory URL (with a trailing slash). */
 export function directoryUrl(credentials: NutstoreCredentials): string {
   const levels = directoryLevelUrls(credentials);
   return levels[levels.length - 1];
 }
 
-/** 拼接远端文件 URL：serverUrl + "/" + 逐段 encodeURIComponent(remoteDir) + "/" + encodeURIComponent(fileName)。 */
+/** Builds the remote file URL: serverUrl + "/" + encodeURIComponent per remoteDir segment + "/" + encodeURIComponent(fileName). */
 export function fileUrl(
   credentials: NutstoreCredentials,
   fileName: string,
@@ -230,12 +214,12 @@ async function request(
     });
   } catch (error) {
     if (isNetworkFailure(error))
-      throw new NutstoreError(NETWORK_MESSAGE, "network");
+      throw new NutstoreError(messages().network, "network");
     throw error;
   }
 }
 
-/** PROPFIND Depth:0 验证凭据与地址；207/200 视为成功。 */
+/** PROPFIND Depth:0 to verify credentials and address; 207/200 count as success. */
 export async function testConnection(
   credentials: NutstoreCredentials,
 ): Promise<void> {
@@ -251,13 +235,13 @@ export async function testConnection(
 
 export interface RemoteFile {
   text: string;
-  /** 服务器给的原始 ETag（含引号则保留）；没有则为 null。 */
+  /** Raw ETag from the server (quotes preserved when present); null if missing. */
   etag: string | null;
   lastModified: string | null;
 }
 
 /**
- * GET 远端 JSON；404 返回 null；其他错误抛 NutstoreError。
+ * GET the remote JSON; 404 returns null; any other error throws NutstoreError.
  *
  * Nutstore answers **409 Conflict** with an `AncestorsNotFound` XML body when
  * the file's parent collection does not exist yet — i.e. the very first sync
@@ -312,11 +296,12 @@ async function ensureDirectory(
 }
 
 /**
- * PUT 远端 JSON。condition:
- * - `{ absent: true }` → `If-None-Match: *`（远端应不存在）
- * - `{ etag }` → `If-Match: <etag>`（基于读到的版本做条件更新）
- * - undefined → 无条件覆盖
- * 父目录缺失（404/409）时自动 MKCOL 目录再重试一次（MKCOL 405 = 已存在，可继续）。
+ * PUT the remote JSON. condition:
+ * - `{ absent: true }` → `If-None-Match: *` (the remote file should not exist)
+ * - `{ etag }` → `If-Match: <etag>` (conditional update against the read version)
+ * - undefined → unconditional overwrite
+ * When the parent folder is missing (404/409) the folder is created with MKCOL
+ * and the write retried once (MKCOL 405 = already exists, keep going).
  */
 export async function uploadFile(
   credentials: NutstoreCredentials,

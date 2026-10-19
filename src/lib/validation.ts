@@ -7,6 +7,7 @@ import {
   isBuiltInEngineId,
 } from "./engines";
 import type { AppState, BackupV1, CustomEngine, GlassMode } from "../types";
+import { t } from "./i18n";
 
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 export const MAX_BACKUP_BYTES = 32 * 1024 * 1024;
@@ -15,7 +16,7 @@ export const MAX_ICON_BYTES = 5 * 1024 * 1024;
 /** Upper bound for the stored icon data URL (~150 KB), well above the encoder's output. */
 const MAX_ICON_DATA_URL = 200_000;
 const fail = (): never => {
-  throw new Error("文件内容不完整或格式不受支持，原有数据未更改。");
+  throw new Error(t().lib.validation.invalidFile);
 };
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -30,20 +31,20 @@ const within = (value: unknown, min: number, max: number): value is number =>
 export function normalizeUrl(input: string): string {
   const value = input.trim();
   if (!value || value.length > 2048 || /\s/.test(value))
-    throw new Error("请输入有效的网址，例如 example.com。");
+    throw new Error(t().lib.validation.urlInvalid);
   // Explicit unsupported schemes must not become an HTTPS hostname.
   if (
     /^[a-z][a-z\d+.-]*:/i.test(value) &&
     !/^https?:\/\//i.test(value) &&
     !/^[\w.-]+:\d+(?:\/|$)/.test(value)
   ) {
-    throw new Error("网站地址仅支持 HTTP 和 HTTPS。");
+    throw new Error(t().lib.validation.urlScheme);
   }
   let url: URL;
   try {
     url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
   } catch {
-    throw new Error("网址格式不正确，请检查后重试。");
+    throw new Error(t().lib.validation.urlFormat);
   }
   if (
     !["http:", "https:"].includes(url.protocol) ||
@@ -51,7 +52,7 @@ export function normalizeUrl(input: string): string {
     url.username ||
     url.password
   ) {
-    throw new Error("请输入不含用户名和密码的 HTTP / HTTPS 地址。");
+    throw new Error(t().lib.validation.urlCredentials);
   }
   return url.href;
 }
@@ -71,16 +72,16 @@ const countToken = (text: string, token: string) =>
 export function normalizeSearchTemplate(input: unknown): string {
   const value = typeof input === "string" ? input.trim() : "";
   if (!value || value.length > 2048)
-    throw new Error("请输入搜索地址，例如 https://example.com/search?q=%s。");
+    throw new Error(t().lib.validation.searchUrlRequired);
   const hasPercent = countToken(value, SEARCH_PLACEHOLDER) > 0;
   const hasAlias = countToken(value, QUERY_ALIAS) > 0;
   const token = hasPercent ? SEARCH_PLACEHOLDER : QUERY_ALIAS;
   if (hasPercent === hasAlias || countToken(value, token) !== 1)
-    throw new Error("搜索地址需要且只能包含一个 %s 占位符。");
+    throw new Error(t().lib.validation.searchUrlPlaceholder);
   const probe = value.replace(token, QUERY_PROBE);
   const normalized = normalizeUrl(probe);
   if (countToken(normalized, QUERY_PROBE) !== 1)
-    throw new Error("搜索地址需要且只能包含一个 %s 占位符。");
+    throw new Error(t().lib.validation.searchUrlPlaceholder);
   return normalized.replace(QUERY_PROBE, SEARCH_PLACEHOLDER);
 }
 
@@ -239,7 +240,7 @@ export function parseState(value: unknown): AppState {
 
 export function parseBackup(text: string): BackupV1 {
   if (new Blob([text]).size > MAX_BACKUP_BYTES)
-    throw new Error("备份文件过大，最大支持 32 MB。");
+    throw new Error(t().lib.validation.backupTooLarge);
   let input: unknown;
   try {
     input = JSON.parse(text);

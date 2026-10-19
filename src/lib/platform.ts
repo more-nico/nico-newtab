@@ -4,6 +4,7 @@ import {
   type StateStorage,
 } from "./persistence";
 import { DEFAULT_ENGINE_ID, buildSearchUrl } from "./engines";
+import { t } from "./i18n";
 
 export const isExtension =
   typeof chrome !== "undefined" &&
@@ -77,7 +78,7 @@ function database(): Promise<IDBDatabase> {
       };
       request.onblocked = () => {
         dbPromise = undefined;
-        reject(new Error("图片存储被其他窗口占用，请关闭旧页面重试。"));
+        reject(new Error(t().lib.platform.storageBusy));
       };
     });
   }
@@ -93,7 +94,8 @@ async function transaction<T>(
     const request = action(tx.objectStore("images"));
     tx.oncomplete = () => resolve(request.result);
     tx.onerror = () => reject(tx.error ?? request.error);
-    tx.onabort = () => reject(tx.error ?? new Error("图片保存中断。"));
+    tx.onabort = () =>
+      reject(tx.error ?? new Error(t().lib.platform.saveInterrupted));
   });
 }
 const assets: AssetStorage = {
@@ -127,8 +129,7 @@ export async function search(
 ): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
-  if (!isExtension)
-    throw new Error("这是网页预览。在浏览器中加载扩展后，即可使用搜索引擎。");
+  if (!isExtension) throw new Error(t().lib.platform.previewOnly);
   // Results open in a new tab so the new tab page stays where it was.
   // chrome.search.query cannot target a specific engine, so only the browser
   // default goes through it. Everything else opens the built URL.

@@ -49,6 +49,7 @@ import { Settings, type SettingsTab } from "./components/Settings";
 import { ShortcutEditor } from "./components/ShortcutEditor";
 import { ClearButton } from "./components/ClearButton";
 import { EngineIcon } from "./components/EngineIcon";
+import { artworkOf, formatClock, formatDate, t } from "./lib/i18n";
 import {
   GlassMaterialProvider,
   glassOverLight,
@@ -153,8 +154,10 @@ export default function App() {
   const [dragging, setDragging] = useState<string | null>(null);
   const refreshVersion = useRef(0);
   const reduced = useReducedMotion();
+  const m = t();
   const s = state.settings;
   const currentArt = ARTWORKS.find((a) => a.id === s.wallpaper);
+  const art = currentArt ? artworkOf(currentArt.id) : null;
   const modalOpen = settingsTab !== null || editor !== null;
   const material = useGlassMaterialValue(s, reduced);
   const glassOptics = material.base.optics!;
@@ -236,7 +239,7 @@ export default function App() {
     } catch {
       if (ticket === refreshVersion.current) {
         setReady(false);
-        setLoadError("暂时无法读取本地数据。为保护已有内容，编辑已暂停。");
+        setLoadError(t().app.status.loadFailed);
       }
     }
   }, []);
@@ -329,8 +332,7 @@ export default function App() {
           setCustomUrl(url);
         })
         .catch(() => {
-          if (!cancelled)
-            setNotice("自定义壁纸暂时无法读取，可以在设置中重新上传。");
+          if (!cancelled) setNotice(t().app.status.customWallpaperFailed);
         });
     return () => {
       cancelled = true;
@@ -360,7 +362,7 @@ export default function App() {
   }, [currentArt?.image, customUrl]);
 
   async function mutate(operation: () => Promise<unknown>) {
-    if (!ready) throw new Error("本地数据尚未加载，请稍后重试。");
+    if (!ready) throw new Error(m.app.status.notReady);
     setPending((n) => n + 1);
     try {
       await operation();
@@ -369,8 +371,8 @@ export default function App() {
       await refresh();
       throw new Error(
         error instanceof Error
-          ? `保存失败：${error.message}`
-          : "保存失败，请检查可用空间后重试。",
+          ? m.app.status.saveFailed(error.message)
+          : m.app.status.saveFailedUnknown,
       );
     } finally {
       setPending((n) => n - 1);
@@ -416,7 +418,7 @@ export default function App() {
             positionY: 50,
             customWallpaper: {
               assetId,
-              name: file.name.slice(0, 200) || "我的壁纸",
+              name: file.name.slice(0, 200) || m.app.wallpaper.defaultName,
               mime: "image/webp",
             },
           },
@@ -452,7 +454,7 @@ export default function App() {
       repository.update((current) => {
         if (editor === "new") {
           if (current.shortcuts.length >= 200)
-            throw new Error("最多可添加 200 个网站。");
+            throw new Error(m.app.shortcuts.limit);
           current.shortcuts.push({
             id: crypto.randomUUID(),
             name,
@@ -461,7 +463,7 @@ export default function App() {
           });
         } else {
           const item = current.shortcuts.find((item) => item.id === editor);
-          if (!item) throw new Error("这个网站已在其他标签页中移除。");
+          if (!item) throw new Error(m.app.shortcuts.removedElsewhere);
           item.name = name;
           item.url = url;
           if (iconDataUrl) item.iconDataUrl = iconDataUrl;
@@ -508,7 +510,7 @@ export default function App() {
     try {
       await search(trimmed, selectedEngine);
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "搜索暂时不可用，请重试。");
+      setNotice(e instanceof Error ? e.message : m.app.search.unavailable);
     } finally {
       setSearching(false);
     }
@@ -525,26 +527,17 @@ export default function App() {
   const hours = now.getHours();
   const greeting =
     hours < 6
-      ? "夜深了，给自己一点宁静。"
+      ? m.app.greeting.lateNight
       : hours < 11
-        ? "早上好，今天也有好风景。"
+        ? m.app.greeting.morning
         : hours < 14
-          ? "午间好，留一点时间给自己。"
+          ? m.app.greeting.noon
           : hours < 18
-            ? "下午好，让灵感慢慢发生。"
-            : "晚上好，把步调放慢一点。";
-  const time = new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: s.clockFormat === "12" ? "h12" : "h23",
-  }).formatToParts(now);
-  const clock = time
-    .filter((p) => ["hour", "minute", "literal"].includes(p.type))
-    .map((p) => p.value)
-    .join("")
-    .trim();
-  const period = time.find((p) => p.type === "dayPeriod")?.value.toUpperCase();
-  const date = `${new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric" }).format(now)} · ${new Intl.DateTimeFormat("zh-CN", { weekday: "long" }).format(now)}`;
+            ? m.app.greeting.afternoon
+            : m.app.greeting.evening;
+  const { clock, period: dayPeriod } = formatClock(now, s.clockFormat);
+  const period = dayPeriod?.toUpperCase() ?? null;
+  const date = formatDate(now);
   const selectedShortcut = state.shortcuts.find((item) => item.id === editor);
 
   return (
@@ -578,12 +571,14 @@ export default function App() {
           <div className="wallpaper-shade" />
           <div className="page-shell" ref={pageShell} inert={modalOpen}>
             <header className="page-header">
-              <div className="brand" aria-label="Nico 新标签页">
+              <div className="brand" aria-label={m.app.header.brandAria}>
                 <span className="brand-wordmark">
                   nico<span>.</span>
                 </span>
                 <span className="brand-divider" />
-                <span className="brand-caption">每一页，都是新的风景</span>
+                <span className="brand-caption">
+                  {m.app.header.brandCaption}
+                </span>
               </div>
               <GlassButton
                 className="gallery-button"
@@ -594,11 +589,14 @@ export default function App() {
                 disabled={!ready}
                 onClick={() => setSettingsTab("appearance")}
               >
-                画作集<span className="gallery-count">03</span>
+                {m.app.header.gallery}
+                <span className="gallery-count">
+                  {m.app.header.galleryCount}
+                </span>
               </GlassButton>
             </header>
             <main className="main-content">
-              <section className="clock-section" aria-label="当前时间">
+              <section className="clock-section" aria-label={m.app.clock.aria}>
                 <p className="greeting">{greeting}</p>
                 <div className="time-line">
                   <time className="clock" dateTime={now.toISOString()}>
@@ -632,7 +630,7 @@ export default function App() {
                     className="search-engine"
                     size="lg"
                     cornerRadius={26}
-                    aria-label="选择搜索引擎"
+                    aria-label={m.app.search.engineAria}
                     disabled={!ready}
                     value={selectedEngine.id}
                     onChange={(key) => {
@@ -640,7 +638,9 @@ export default function App() {
                       setSuggestBlocked(false);
                       void changeSettings({ searchEngine: key }).catch((e) =>
                         setNotice(
-                          e instanceof Error ? e.message : "引擎保存失败。",
+                          e instanceof Error
+                            ? e.message
+                            : m.app.search.engineSaveFailed,
                         ),
                       );
                     }}
@@ -666,8 +666,8 @@ export default function App() {
                     size="lg"
                     cornerRadius={26}
                     leading={<Search size={20} strokeWidth={1.6} />}
-                    aria-label="搜索"
-                    placeholder="搜索，让好奇心带路"
+                    aria-label={m.app.search.inputAria}
+                    placeholder={m.app.search.placeholder}
                     value={query}
                     onChange={(e) => {
                       // Editing releases the committed query again.
@@ -736,7 +736,7 @@ export default function App() {
                       <>
                         {query && (
                           <ClearButton
-                            label="清空搜索"
+                            label={m.app.search.clearAria}
                             onClear={() => {
                               submitted.current = "";
                               clearSuggestions();
@@ -747,7 +747,7 @@ export default function App() {
                         <button
                           className="search-submit"
                           type="submit"
-                          aria-label="开始搜索"
+                          aria-label={m.app.search.submitAria}
                           disabled={searching || !query.trim()}
                         >
                           <ArrowRight size={19} strokeWidth={1.6} />
@@ -763,7 +763,7 @@ export default function App() {
                       className="search-suggestions"
                       cornerRadius={26}
                       role="listbox"
-                      aria-label="搜索建议"
+                      aria-label={m.app.search.suggestionsAria}
                       optics={searchOptics}
                       {...glassInteraction}
                     >
@@ -801,18 +801,17 @@ export default function App() {
                     selectedEngine.suggest &&
                     suggestions.length === 0 && (
                       <p className="search-suggest-error" aria-live="polite">
-                        搜索建议不可用：请到 chrome://extensions
-                        重新加载扩展，然后新开一个标签页。
+                        {m.app.search.suggestionsUnavailable}
                       </p>
                     )}
                 </form>
                 <section
                   className={`shortcuts-section ${managing ? "is-managing" : ""}`}
-                  aria-label="常用网站"
+                  aria-label={m.app.shortcuts.sectionAria}
                 >
                   {state.shortcuts.length > 0 && (
                     <div className="shortcut-toolbar">
-                      <span>常用网站</span>
+                      <span>{m.app.shortcuts.title}</span>
                       <GlassButton
                         size="sm"
                         className="toolbar-button"
@@ -824,12 +823,12 @@ export default function App() {
                         {managing ? (
                           <>
                             <Check size={12} />
-                            完成
+                            {m.common.actions.done}
                           </>
                         ) : (
                           <>
                             <MoreHorizontal size={15} />
-                            整理
+                            {m.app.shortcuts.manage}
                           </>
                         )}
                       </GlassButton>
@@ -903,7 +902,9 @@ export default function App() {
                             }
                           }}
                           aria-label={
-                            managing ? `编辑 ${item.name}` : item.name
+                            managing
+                              ? m.app.shortcuts.editAria(item.name)
+                              : item.name
                           }
                         >
                           <GlassSurface
@@ -921,7 +922,7 @@ export default function App() {
                             variant="icon"
                             size="sm"
                             className="shortcut-edit"
-                            aria-label={`编辑 ${item.name}`}
+                            aria-label={m.app.shortcuts.editAria(item.name)}
                             onClick={() => setEditor(item.id)}
                             disabled={!ready}
                             icon={<MoreHorizontal size={14} />}
@@ -937,7 +938,7 @@ export default function App() {
                           className="shortcut-link"
                           disabled={!ready}
                           onClick={() => setEditor("new")}
-                          aria-label="添加常用网站"
+                          aria-label={m.app.shortcuts.addAria}
                         >
                           <GlassSurface
                             className="shortcut-glass add-glass"
@@ -947,13 +948,15 @@ export default function App() {
                           >
                             <Plus size={24} strokeWidth={1.4} />
                           </GlassSurface>
-                          <span className="shortcut-name">添加网站</span>
+                          <span className="shortcut-name">
+                            {m.app.shortcuts.add}
+                          </span>
                         </button>
                       </div>
                     )}
                   </div>
                   {state.shortcuts.length === 0 && (
-                    <p className="empty-hint">把常去的地方，留在这里。</p>
+                    <p className="empty-hint">{m.app.shortcuts.empty}</p>
                   )}
                 </section>
               </GlassLightGroup>
@@ -970,30 +973,30 @@ export default function App() {
                     onClick={() => void refresh()}
                     {...material.base}
                   >
-                    重新读取
+                    {m.app.status.retryLoad}
                   </GlassButton>
                 </GlassAlert>
               )}
             </main>
             <footer className="page-footer">
-              {currentArt ? (
+              {currentArt && art ? (
                 <a
                   className="art-credit"
                   href={currentArt.source}
                   target="_blank"
                   rel="noreferrer"
-                  aria-label={`查看馆藏：${currentArt.title}`}
+                  aria-label={m.common.source.viewAria(art.title)}
                 >
                   <span className="credit-icon">
                     <ImageIcon size={19} strokeWidth={1.4} />
                   </span>
                   <span>
                     <strong>
-                      {currentArt.title}
+                      {art.title}
                       <ExternalLink size={11} />
                     </strong>
                     <small>
-                      {currentArt.artist}
+                      {art.artist}
                       <span className="credit-dot">·</span>
                       {currentArt.year}
                     </small>
@@ -1005,15 +1008,15 @@ export default function App() {
                     <ImageIcon size={19} strokeWidth={1.4} />
                   </span>
                   <span>
-                    <strong>我的风景</strong>
+                    <strong>{m.app.footer.myLandscape}</strong>
                     <small>{s.customWallpaper?.name}</small>
                   </span>
                 </div>
               )}
               <span className="footer-note">
                 {wallpaperError
-                  ? "壁纸暂不可用 · 已显示备用背景"
-                  : "在日常里，与美相遇"}
+                  ? m.app.footer.wallpaperUnavailable
+                  : m.app.footer.note}
               </span>
               <GlassButton
                 className="settings-button"
@@ -1024,11 +1027,13 @@ export default function App() {
                 disabled={!ready}
                 onClick={() => setSettingsTab("appearance")}
               >
-                设置
+                {m.app.footer.settings}
                 <ChevronRight size={13} />
               </GlassButton>
             </footer>
-            {!isExtension && <span className="preview-badge">网页预览</span>}
+            {!isExtension && (
+              <span className="preview-badge">{m.app.previewBadge}</span>
+            )}
           </div>
           {settingsTab && (
             <Settings
@@ -1075,7 +1080,7 @@ export default function App() {
               <GlassButton
                 variant="icon"
                 size="sm"
-                aria-label="关闭提示"
+                aria-label={m.app.status.closeToastAria}
                 onClick={() => setNotice("")}
                 icon={<X size={15} />}
                 {...material.base}

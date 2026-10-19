@@ -21,28 +21,13 @@ import {
   UserRound,
 } from "lucide-react";
 import type { SyncSettings } from "../lib/sync";
+import { formatDateTime, t } from "../lib/i18n";
 import { isExtension } from "../lib/platform";
 import { useGlassMaterial } from "../lib/glass";
 import "./nutstore-sync.css";
 
-/** 坚果云帮助中心：如何生成第三方应用密码。 */
+/** Nutstore help center: how to generate a third-party app password. */
 const MANUAL_URL = "https://help.jianguoyun.com/?p=2064";
-
-const TIME_FORMAT = new Intl.DateTimeFormat("zh-CN", {
-  // `month: "long"` is what yields 10月19日 in zh-CN; numeric would give 10/19.
-  month: "long",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
-/** Localized `10月19日 18:30`; null when the stored timestamp is unusable. */
-function formatTime(value: string | null): string | null {
-  if (!value) return null;
-  const time = Date.parse(value);
-  return Number.isFinite(time) ? TIME_FORMAT.format(time) : null;
-}
 
 interface ConnectDraft {
   serverUrl: string;
@@ -65,7 +50,7 @@ export interface NutstoreSyncProps {
   busy: boolean;
   error: string;
   notice: string;
-  /** 首次连接时云端已有备份，等待用户选择覆盖方向。 */
+  /** The first connection found a remote backup; waiting for the overwrite direction. */
   pending: { exportedAt: string } | null;
   onConnect: (input: {
     serverUrl: string;
@@ -82,10 +67,9 @@ export interface NutstoreSyncProps {
 }
 
 /**
- * 设置 → 同步 panel: connect form for 坚果云 WebDAV, the connected account card,
- * manual sync actions, the first-connect conflict decision and the auto-sync
- * preference. All copy is Chinese; the two files this lives in are owned by
- * the sync UI task (see `.cache/nutstore-sync-contract.md`).
+ * Settings → Sync panel: connect form for Nutstore WebDAV, the connected
+ * account card, manual sync actions, the first-connect conflict decision and
+ * the auto-sync preference.
  */
 export function NutstoreSync({
   settings,
@@ -102,6 +86,7 @@ export function NutstoreSync({
   onAutoSyncChange,
   onClearFeedback,
 }: NutstoreSyncProps): JSX.Element {
+  const m = t();
   const { base } = useGlassMaterial();
   // `null` means "follow the stored settings". Once the user types, the draft
   // owns the fields so a settings refresh never wipes the input; the draft is
@@ -125,9 +110,9 @@ export function NutstoreSync({
     username: settings.username,
     password: settings.password,
   };
-  const lastSynced = formatTime(settings.lastSyncedAt);
+  const lastSynced = formatDateTime(settings.lastSyncedAt);
   const pendingTime = pending
-    ? (formatTime(pending.exportedAt) ?? "时间未知")
+    ? (formatDateTime(pending.exportedAt) ?? m.sync.panel.unknownTime)
     : "";
   const danger = localError || error;
 
@@ -162,7 +147,9 @@ export function NutstoreSync({
       await operation();
     } catch (caught) {
       setLocalError(
-        caught instanceof Error ? caught.message : "操作失败，请重试。",
+        caught instanceof Error
+          ? caught.message
+          : t().sync.errors.genericFailure,
       );
     } finally {
       setActiveAction(null);
@@ -175,10 +162,9 @@ export function NutstoreSync({
     const serverUrl = form.serverUrl.trim();
     const username = form.username.trim();
     const password = form.password;
-    if (!serverUrl) return setLocalError("请填写服务器地址。");
-    if (!username) return setLocalError("请填写坚果云账号（邮箱）。");
-    if (!password)
-      return setLocalError("请填写第三方应用密码（不是登录密码）。");
+    if (!serverUrl) return setLocalError(m.sync.panel.serverUrlRequired);
+    if (!username) return setLocalError(m.sync.panel.usernameRequired);
+    if (!password) return setLocalError(m.sync.panel.passwordRequired);
     await runAction("connect", () =>
       onConnect({ serverUrl, username, password }),
     );
@@ -209,8 +195,8 @@ export function NutstoreSync({
   return (
     <div className="nutstore-sync" aria-busy={busy}>
       <div className="section-heading">
-        <h3>把设置带到每台设备</h3>
-        <span>坚果云 · WebDAV</span>
+        <h3>{m.sync.panel.heading}</h3>
+        <span>{m.sync.panel.service}</span>
       </div>
       {settings.enabled ? (
         <>
@@ -224,10 +210,10 @@ export function NutstoreSync({
               <Cloud size={23} />
             </span>
             <div className="nutstore-account-text">
-              <strong>已连接坚果云</strong>
-              <p>账号 {settings.username}</p>
+              <strong>{m.sync.panel.connected}</strong>
+              <p>{m.sync.panel.account(settings.username)}</p>
               <p>
-                服务器 {settings.serverUrl} · 同步目录 {settings.remoteDir}
+                {m.sync.panel.server(settings.serverUrl, settings.remoteDir)}
               </p>
             </div>
             <GlassButton
@@ -239,7 +225,9 @@ export function NutstoreSync({
               data-testid="nutstore-sync-now"
               {...base}
             >
-              {activeAction === "sync" ? "同步中…" : "立即同步"}
+              {activeAction === "sync"
+                ? m.sync.panel.syncing
+                : m.sync.panel.syncNow}
             </GlassButton>
           </GlassSurface>
           <div className="nutstore-actions">
@@ -253,7 +241,9 @@ export function NutstoreSync({
               data-testid="nutstore-upload"
               {...base}
             >
-              {activeAction === "upload" ? "上传中…" : "上传本机"}
+              {activeAction === "upload"
+                ? m.sync.panel.uploading
+                : m.sync.panel.upload}
             </GlassButton>
             <GlassButton
               size="sm"
@@ -272,7 +262,9 @@ export function NutstoreSync({
               data-testid="nutstore-restore"
               {...base}
             >
-              {activeAction === "restore" ? "恢复中…" : "从云端恢复"}
+              {activeAction === "restore"
+                ? m.sync.panel.restoring
+                : m.sync.panel.restore}
             </GlassButton>
             <GlassButton
               size="sm"
@@ -286,22 +278,20 @@ export function NutstoreSync({
               data-testid="nutstore-disconnect"
               {...base}
             >
-              断开连接
+              {m.sync.panel.disconnect}
             </GlassButton>
           </div>
           {confirmAction === "disconnect" && (
             <GlassSurface
               className="import-confirm nutstore-confirm"
               role="region"
-              aria-label="确认断开坚果云同步"
+              aria-label={m.sync.panel.disconnectConfirmAria}
               cornerRadius={26}
               data-testid="nutstore-confirm-disconnect"
               {...base}
             >
-              <strong>断开坚果云同步？</strong>
-              <p>
-                本机保存的账号与应用密码会被清除，云端备份会保留，之后可以重新连接。
-              </p>
+              <strong>{m.sync.panel.disconnectConfirmTitle}</strong>
+              <p>{m.sync.panel.disconnectConfirmBody}</p>
               <div className="button-pair">
                 <GlassButton
                   size="sm"
@@ -311,7 +301,7 @@ export function NutstoreSync({
                   data-testid="nutstore-cancel-disconnect"
                   {...base}
                 >
-                  取消
+                  {m.common.actions.cancel}
                 </GlassButton>
                 <GlassButton
                   size="sm"
@@ -321,7 +311,9 @@ export function NutstoreSync({
                   data-testid="nutstore-confirm-disconnect-button"
                   {...base}
                 >
-                  {activeAction === "disconnect" ? "断开中…" : "确认断开"}
+                  {activeAction === "disconnect"
+                    ? m.sync.panel.disconnecting
+                    : m.sync.panel.disconnectConfirmButton}
                 </GlassButton>
               </div>
             </GlassSurface>
@@ -330,15 +322,13 @@ export function NutstoreSync({
             <GlassSurface
               className="import-confirm nutstore-confirm"
               role="region"
-              aria-label="确认从云端恢复备份"
+              aria-label={m.sync.panel.restoreConfirmAria}
               cornerRadius={26}
               data-testid="nutstore-confirm-restore"
               {...base}
             >
-              <strong>用云端备份覆盖本机内容？</strong>
-              <p>
-                将替换当前的常用网站、全部设置与自定义壁纸，建议先「上传本机」保存当前内容。
-              </p>
+              <strong>{m.sync.panel.restoreConfirmTitle}</strong>
+              <p>{m.sync.panel.restoreConfirmBody}</p>
               <div className="button-pair">
                 <GlassButton
                   size="sm"
@@ -348,7 +338,7 @@ export function NutstoreSync({
                   data-testid="nutstore-cancel-restore"
                   {...base}
                 >
-                  取消
+                  {m.common.actions.cancel}
                 </GlassButton>
                 <GlassButton
                   className="primary-button"
@@ -357,7 +347,9 @@ export function NutstoreSync({
                   data-testid="nutstore-confirm-restore-button"
                   {...base}
                 >
-                  {activeAction === "restore" ? "恢复中…" : "确认恢复"}
+                  {activeAction === "restore"
+                    ? m.sync.panel.restoring
+                    : m.sync.panel.restoreConfirmButton}
                 </GlassButton>
               </div>
             </GlassSurface>
@@ -366,15 +358,13 @@ export function NutstoreSync({
             <GlassSurface
               className="import-confirm nutstore-pending"
               role="region"
-              aria-label="选择云端备份覆盖方向"
+              aria-label={m.sync.panel.pendingAria}
               cornerRadius={26}
               data-testid="nutstore-pending"
               {...base}
             >
-              <strong>云端已有备份（{pendingTime}）。</strong>
-              <p>
-                选择覆盖方向：「从云端恢复」会替换本机内容；「上传本机覆盖云端」会用当前内容替换云端备份。
-              </p>
+              <strong>{m.sync.panel.pendingTitle(pendingTime)}</strong>
+              <p>{m.sync.panel.pendingBody}</p>
               <div className="button-pair">
                 <GlassButton
                   size="sm"
@@ -385,8 +375,8 @@ export function NutstoreSync({
                   {...base}
                 >
                   {activeAction === "resolve" && pendingChoice === "restore"
-                    ? "恢复中…"
-                    : "从云端恢复"}
+                    ? m.sync.panel.restoring
+                    : m.sync.panel.restore}
                 </GlassButton>
                 <GlassButton
                   className="primary-button"
@@ -396,8 +386,8 @@ export function NutstoreSync({
                   {...base}
                 >
                   {activeAction === "resolve" && pendingChoice === "upload"
-                    ? "上传中…"
-                    : "上传本机覆盖云端"}
+                    ? m.sync.panel.uploading
+                    : m.sync.panel.pendingUpload}
                 </GlassButton>
               </div>
             </GlassSurface>
@@ -429,22 +419,25 @@ export function NutstoreSync({
           <div className="nutstore-info">
             <div className="setting-row nutstore-last-sync">
               <div>
-                <label>上次同步</label>
+                <label>{m.sync.panel.lastSync}</label>
                 <p data-testid="nutstore-last-sync">
-                  {lastSynced ?? "尚未同步"}
+                  {lastSynced ?? m.sync.panel.neverSynced}
                 </p>
               </div>
               {busy && (
-                <GlassSpinner size="sm" label="正在与坚果云同步" {...base} />
+                <GlassSpinner
+                  size="sm"
+                  label={m.sync.panel.syncingSpinner}
+                  {...base}
+                />
               )}
             </div>
             <div className="setting-row">
               <div>
-                <label id="nutstore-auto-sync-label">自动同步</label>
-                <p id="nutstore-auto-sync-help">
-                  本机改动会在几秒后自动上传；打开新标签页时最多每 10
-                  分钟检查一次云端更新。
-                </p>
+                <label id="nutstore-auto-sync-label">
+                  {m.sync.panel.autoSync}
+                </label>
+                <p id="nutstore-auto-sync-help">{m.sync.panel.autoSyncHelp}</p>
               </div>
               <GlassSwitch
                 size="sm"
@@ -481,13 +474,15 @@ export function NutstoreSync({
           >
             <form
               className="nutstore-connect-form"
-              aria-label="连接坚果云"
+              aria-label={m.sync.panel.connectAria}
               onSubmit={(event) => void submitConnect(event)}
             >
-              <label htmlFor="nutstore-server-url">服务器地址</label>
+              <label htmlFor="nutstore-server-url">
+                {m.sync.panel.serverUrl}
+              </label>
               <GlassInput
                 id="nutstore-server-url"
-                aria-label="服务器地址"
+                aria-label={m.sync.panel.serverUrl}
                 aria-describedby="nutstore-server-url-help"
                 value={form.serverUrl}
                 onChange={(event) =>
@@ -502,13 +497,12 @@ export function NutstoreSync({
                 {...base}
               />
               <p className="nutstore-help" id="nutstore-server-url-help">
-                坚果云固定为
-                https://dav.jianguoyun.com/dav；网页预览可填本地模拟地址。
+                {m.sync.panel.serverUrlHelp}
               </p>
-              <label htmlFor="nutstore-username">坚果云账号</label>
+              <label htmlFor="nutstore-username">{m.sync.panel.username}</label>
               <GlassInput
                 id="nutstore-username"
-                aria-label="坚果云账号"
+                aria-label={m.sync.panel.username}
                 value={form.username}
                 onChange={(event) =>
                   editDraft({ username: event.target.value })
@@ -521,16 +515,16 @@ export function NutstoreSync({
                 data-testid="nutstore-username"
                 {...base}
               />
-              <label htmlFor="nutstore-password">应用密码</label>
+              <label htmlFor="nutstore-password">{m.sync.panel.password}</label>
               <GlassInput
                 id="nutstore-password"
-                aria-label="应用密码"
+                aria-label={m.sync.panel.password}
                 type={showPassword ? "text" : "password"}
                 value={form.password}
                 onChange={(event) =>
                   editDraft({ password: event.target.value })
                 }
-                placeholder="第三方应用密码，不是登录密码"
+                placeholder={m.sync.panel.passwordPlaceholder}
                 autoComplete="current-password"
                 spellCheck={false}
                 leading={<KeyRound size={16} />}
@@ -541,9 +535,17 @@ export function NutstoreSync({
                   <button
                     type="button"
                     className="nutstore-password-toggle"
-                    aria-label={showPassword ? "隐藏应用密码" : "显示应用密码"}
+                    aria-label={
+                      showPassword
+                        ? m.sync.panel.hidePassword
+                        : m.sync.panel.showPassword
+                    }
                     aria-pressed={showPassword}
-                    title={showPassword ? "隐藏应用密码" : "显示应用密码"}
+                    title={
+                      showPassword
+                        ? m.sync.panel.hidePassword
+                        : m.sync.panel.showPassword
+                    }
                     disabled={busy}
                     data-testid="nutstore-password-toggle"
                     onClick={() => setShowPassword((current) => !current)}
@@ -588,7 +590,9 @@ export function NutstoreSync({
                   data-testid="nutstore-connect"
                   {...base}
                 >
-                  {activeAction === "connect" ? "连接中…" : "连接并同步"}
+                  {activeAction === "connect"
+                    ? m.sync.panel.connecting
+                    : m.sync.panel.connect}
                 </GlassButton>
               </div>
             </form>
@@ -600,10 +604,10 @@ export function NutstoreSync({
               data-testid="nutstore-preview-hint"
               {...base}
             >
-              真实坚果云在网页预览中受跨域限制，连接会失败。开发期可先用{" "}
-              <code>npm run mock:webdav</code>{" "}
-              启动本地模拟服务，并把服务器地址填成{" "}
-              <code>http://127.0.0.1:8787/dav</code>。
+              {m.sync.panel.previewBefore} <code>npm run mock:webdav</code>{" "}
+              {m.sync.panel.previewAfterMock}{" "}
+              <code>http://127.0.0.1:8787/dav</code>
+              {m.sync.panel.previewEnd}
             </GlassSurface>
           )}
           <GlassSurface
@@ -612,22 +616,14 @@ export function NutstoreSync({
             data-testid="nutstore-manual"
             {...base}
           >
-            <p>
-              在坚果云网页端 → 右上角账户名 → 账户信息 → 安全选项 →
-              第三方应用管理 → 添加应用密码，生成后填到上方。
-            </p>
+            <p>{m.sync.panel.manualSteps}</p>
             <p>
               <a href={MANUAL_URL} target="_blank" rel="noreferrer">
-                查看坚果云接入手册 ↗
+                {m.sync.panel.manualLink}
               </a>
             </p>
-            <p className="nutstore-security">
-              坚果云官方人员不会向您索取应用密码，为了数据安全，请勿把应用密码告诉任何人。
-            </p>
-            <p>
-              账号与应用密码只保存在本机，不会写进导出备份，也不会上传到任何第三方；远端只使用坚果云
-              WebDAV 地址。
-            </p>
+            <p className="nutstore-security">{m.sync.panel.security}</p>
+            <p>{m.sync.panel.privacy}</p>
           </GlassSurface>
         </>
       )}

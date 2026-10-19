@@ -15,6 +15,7 @@ import {
   type ResolvedEngine,
 } from "../lib/engines";
 import { normalizeSearchTemplate } from "../lib/validation";
+import { t } from "../lib/i18n";
 import { ClearButton } from "./ClearButton";
 import { EngineIcon } from "./EngineIcon";
 import { useGlassMaterial } from "../lib/glass";
@@ -53,6 +54,7 @@ export function SearchEngineSettings({
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const { base } = useGlassMaterial();
+  const m = t();
   const engines = settings.customEngines;
   const atLimit = engines.length >= MAX_CUSTOM_ENGINES;
   const locked = busy || saving;
@@ -64,7 +66,7 @@ export function SearchEngineSettings({
       await onChange(patch);
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "保存失败，请重试。");
+      setError(e instanceof Error ? e.message : m.settings.engines.errors.save);
       return false;
     } finally {
       setSaving(false);
@@ -75,20 +77,22 @@ export function SearchEngineSettings({
     event.preventDefault();
     if (!draft) return;
     const name = draft.name.trim();
-    if (!name) return setError("给这个搜索引擎取一个名字吧。");
+    if (!name) return setError(m.settings.engines.errors.nameRequired);
     if (name.length > MAX_ENGINE_NAME)
-      return setError(`名称最多 ${MAX_ENGINE_NAME} 个字符。`);
+      return setError(m.settings.engines.errors.nameTooLong(MAX_ENGINE_NAME));
     if (draft.id === null && atLimit)
-      return setError(`最多可添加 ${MAX_CUSTOM_ENGINES} 个自定义搜索引擎。`);
+      return setError(m.settings.engines.errors.limit(MAX_CUSTOM_ENGINES));
     if (
       engines.some((engine) => engine.name === name && engine.id !== draft.id)
     )
-      return setError("已经有同名的搜索引擎了。");
+      return setError(m.settings.engines.errors.duplicate);
     let urlTemplate: string;
     try {
       urlTemplate = normalizeSearchTemplate(draft.urlTemplate);
     } catch (e) {
-      return setError(e instanceof Error ? e.message : "搜索地址不正确。");
+      return setError(
+        e instanceof Error ? e.message : m.settings.engines.errors.invalidUrl,
+      );
     }
     const ok = await commit({
       customEngines: draft.id
@@ -115,7 +119,7 @@ export function SearchEngineSettings({
   return (
     <div className="engine-settings">
       {engines.length === 0 && !draft && (
-        <p className="engine-empty">还没有自定义搜索引擎。</p>
+        <p className="engine-empty">{m.settings.engines.empty}</p>
       )}
       {engines.map((engine) => (
         <GlassSurface
@@ -140,7 +144,7 @@ export function SearchEngineSettings({
                 onClick={() => setConfirmId(null)}
                 {...base}
               >
-                取消
+                {m.common.actions.cancel}
               </GlassButton>
               <GlassButton
                 size="sm"
@@ -149,7 +153,9 @@ export function SearchEngineSettings({
                 onClick={() => void remove(engine.id)}
                 {...base}
               >
-                {saving ? "移除中…" : "确认移除"}
+                {saving
+                  ? m.settings.engines.card.removeBusy
+                  : m.settings.engines.card.confirmRemove}
               </GlassButton>
             </div>
           ) : (
@@ -168,7 +174,7 @@ export function SearchEngineSettings({
                 }}
                 {...base}
               >
-                编辑
+                {m.common.actions.edit}
               </GlassButton>
               <GlassButton
                 size="sm"
@@ -177,7 +183,7 @@ export function SearchEngineSettings({
                 onClick={() => setConfirmId(engine.id)}
                 {...base}
               >
-                移除
+                {m.common.actions.remove}
               </GlassButton>
             </div>
           )}
@@ -190,8 +196,9 @@ export function SearchEngineSettings({
           role="status"
           {...base}
         >
-          确定移除“{engines.find((engine) => engine.id === confirmId)?.name}”？
-          使用它的搜索栏会回到浏览器默认引擎。
+          {m.settings.engines.card.confirmRemoveNote(
+            engines.find((engine) => engine.id === confirmId)?.name ?? "",
+          )}
         </GlassAlert>
       )}
       {draft ? (
@@ -201,7 +208,9 @@ export function SearchEngineSettings({
             onSubmit={(event) => void submit(event)}
           >
             <GlassLightGroup>
-              <label htmlFor="engine-name">名称</label>
+              <label htmlFor="engine-name">
+                {m.settings.engines.form.name}
+              </label>
               <GlassInput
                 id="engine-name"
                 value={draft.name}
@@ -211,13 +220,13 @@ export function SearchEngineSettings({
                   )
                 }
                 maxLength={MAX_ENGINE_NAME}
-                placeholder="例如：知乎"
+                placeholder={m.settings.engines.form.namePlaceholder}
                 invalid={Boolean(error)}
                 disabled={locked}
                 trailing={
                   draft.name ? (
                     <ClearButton
-                      label="清空引擎名称"
+                      label={m.settings.engines.form.clearNameAria}
                       onClear={() =>
                         setDraft((current) =>
                           current ? { ...current, name: "" } : current,
@@ -228,7 +237,7 @@ export function SearchEngineSettings({
                 }
                 {...base}
               />
-              <label htmlFor="engine-url">搜索地址</label>
+              <label htmlFor="engine-url">{m.settings.engines.form.url}</label>
               <GlassInput
                 id="engine-url"
                 value={draft.urlTemplate}
@@ -240,14 +249,14 @@ export function SearchEngineSettings({
                   )
                 }
                 maxLength={2048}
-                placeholder="https://www.zhihu.com/search?q=%s"
+                placeholder={m.settings.engines.form.urlPlaceholder}
                 leading={<Link size={16} />}
                 invalid={Boolean(error)}
                 disabled={locked}
                 trailing={
                   draft.urlTemplate ? (
                     <ClearButton
-                      label="清空搜索地址"
+                      label={m.settings.engines.form.clearUrlAria}
                       onClear={() =>
                         setDraft((current) =>
                           current ? { ...current, urlTemplate: "" } : current,
@@ -258,9 +267,7 @@ export function SearchEngineSettings({
                 }
                 {...base}
               />
-              <p className="engine-help">
-                使用 %s 代表搜索关键词，仅支持 HTTP / HTTPS。
-              </p>
+              <p className="engine-help">{m.settings.engines.form.help}</p>
               {error && (
                 <GlassAlert tone="danger" role="alert" {...base}>
                   {error}
@@ -278,7 +285,7 @@ export function SearchEngineSettings({
                   }}
                   {...base}
                 >
-                  取消
+                  {m.common.actions.cancel}
                 </GlassButton>
                 <GlassButton
                   type="submit"
@@ -286,7 +293,9 @@ export function SearchEngineSettings({
                   disabled={locked}
                   {...base}
                 >
-                  {saving ? "保存中…" : "保存引擎"}
+                  {saving
+                    ? m.common.actions.saving
+                    : m.settings.engines.form.save}
                 </GlassButton>
               </div>
             </GlassLightGroup>
@@ -310,11 +319,11 @@ export function SearchEngineSettings({
             }}
             {...base}
           >
-            添加搜索引擎
+            {m.settings.engines.add}
           </GlassButton>
           {atLimit && (
             <span className="engine-limit">
-              最多 {MAX_CUSTOM_ENGINES} 个自定义搜索引擎
+              {m.settings.engines.limit(MAX_CUSTOM_ENGINES)}
             </span>
           )}
         </div>

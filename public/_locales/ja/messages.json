@@ -1,0 +1,8 @@
+{
+  "extName": { "message": "Nico · 印象派ニュータブ" },
+  "extShortName": { "message": "Nico ニュータブ" },
+  "extDescription": {
+    "message": "モネの絵画とインタラクティブなガラス、時計、検索、よく使うサイトを備えたローカル優先の新しいタブページ。"
+  },
+  "actionTitle": { "message": "Nico に追加" }
+}

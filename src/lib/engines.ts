@@ -1,4 +1,5 @@
 import type { AppSettings, BuiltInEngineId } from "../types";
+import { t } from "./i18n";
 
 export const DEFAULT_ENGINE_ID: string = "default";
 export const MAX_CUSTOM_ENGINES = 8;
@@ -14,7 +15,6 @@ export type EngineGlyph =
 
 export interface BuiltInEngine {
   id: BuiltInEngineId;
-  name: string;
   /** Absent for "default", which delegates to the browser's own engine. */
   urlTemplate?: string;
   suggest: boolean;
@@ -22,36 +22,37 @@ export interface BuiltInEngine {
 }
 
 export const BUILT_IN_ENGINES: readonly BuiltInEngine[] = [
-  { id: "default", name: "默认", suggest: false, glyph: "default" },
+  { id: "default", suggest: false, glyph: "default" },
   {
     id: "google",
-    name: "Google",
     urlTemplate: "https://www.google.com/search?q=%s",
     suggest: true,
     glyph: "google",
   },
   {
     id: "bing",
-    name: "Bing",
     urlTemplate: "https://www.bing.com/search?q=%s",
     suggest: true,
     glyph: "bing",
   },
   {
     id: "baidu",
-    name: "百度",
     urlTemplate: "https://www.baidu.com/s?wd=%s",
     suggest: true,
     glyph: "baidu",
   },
   {
     id: "duckduckgo",
-    name: "DuckDuckGo",
     urlTemplate: "https://duckduckgo.com/?q=%s",
     suggest: true,
     glyph: "duckduckgo",
   },
 ];
+
+/** Localized display name for a built-in engine (read at call time). */
+export function builtInEngineName(id: BuiltInEngineId): string {
+  return t().lib.engineNames[id];
+}
 
 export interface ResolvedEngine {
   id: string;
@@ -73,7 +74,7 @@ export function listEngines(settings: AppSettings): ResolvedEngine[] {
   return [
     ...BUILT_IN_ENGINES.map((engine) => ({
       id: engine.id,
-      name: engine.name,
+      name: builtInEngineName(engine.id),
       urlTemplate: engine.urlTemplate,
       suggest: engine.suggest,
       glyph: engine.glyph,

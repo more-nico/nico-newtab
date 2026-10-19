@@ -7,6 +7,7 @@ const browser = await chromium.launch({ channel: "chromium", headless: true });
 try {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 900 },
+    locale: "zh-CN",
   });
   page.setDefaultTimeout(10000);
   const errors = [];

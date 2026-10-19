@@ -86,6 +86,7 @@ async function record(name, viewport, play) {
     channel: "chromium",
     headless: true,
     viewport,
+    locale: "zh-CN",
     recordVideo: { dir: videoDir, size: viewport },
   });
   try {

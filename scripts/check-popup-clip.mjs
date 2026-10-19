@@ -7,6 +7,7 @@ const ctx = await chromium.launchPersistentContext(
     channel: "chrome",
     headless: true,
     viewport: { width: 1366, height: 768 },
+    locale: "zh-CN",
     args: ["--enable-unsafe-extension-debugging"],
     ignoreDefaultArgs: ["--disable-extensions"],
   },
@@ -54,7 +55,12 @@ try {
         const g = c.getContext("2d");
         g.drawImage(img, 0, 0);
         return pts.map(([name, x, y]) =>
-          [name, ...Array.from(g.getImageData(Math.round(x), Math.round(y), 1, 1).data)].join(":"),
+          [
+            name,
+            ...Array.from(
+              g.getImageData(Math.round(x), Math.round(y), 1, 1).data,
+            ),
+          ].join(":"),
         );
       },
       { b64: shot.toString("base64"), points },
@@ -65,7 +71,8 @@ try {
 
   const clipped = await sample("with rounded window clip");
   await page.addStyleTag({
-    content: ".popup { overflow: visible !important; border-radius: 0 !important }",
+    content:
+      ".popup { overflow: visible !important; border-radius: 0 !important }",
   });
   await page.waitForTimeout(300);
   const plain = await sample("clip removed");

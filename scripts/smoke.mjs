@@ -42,6 +42,7 @@ for (const channel of channels) {
         channel,
         headless: true,
         viewport: { width: 1366, height: 768 },
+        locale: "zh-CN",
         args: ["--enable-unsafe-extension-debugging"],
         ignoreDefaultArgs: ["--disable-extensions"],
       });

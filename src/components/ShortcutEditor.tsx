@@ -10,6 +10,7 @@ import { ArrowDown, ArrowUp, Link, Trash2 } from "lucide-react";
 import type { Shortcut } from "../types";
 import { optimizeIcon } from "../lib/images";
 import { normalizeUrl } from "../lib/validation";
+import { t } from "../lib/i18n";
 import { ClearButton } from "./ClearButton";
 import { Modal } from "./Modal";
 import { useGlassMaterial } from "../lib/glass";
@@ -39,6 +40,7 @@ export function ShortcutEditor({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const iconInput = useRef<HTMLInputElement>(null);
   const { base, panel } = useGlassMaterial();
+  const m = t();
   async function run(action: () => Promise<void>, close = true) {
     setBusy(true);
     setError("");
@@ -46,7 +48,7 @@ export function ShortcutEditor({
       await action();
       if (close) onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "保存失败，请重试。");
+      setError(e instanceof Error ? e.message : m.editor.errors.save);
     } finally {
       setBusy(false);
     }
@@ -57,7 +59,7 @@ export function ShortcutEditor({
     try {
       setIcon(await optimizeIcon(file));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "图标处理失败，请换一张试试。");
+      setError(e instanceof Error ? e.message : m.editor.errors.icon);
     } finally {
       setBusy(false);
     }
@@ -65,12 +67,12 @@ export function ShortcutEditor({
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!name.trim()) {
-      setError("给这个网站取一个名字吧。");
+      setError(m.editor.errors.nameRequired);
       return;
     }
     void run(async () => onSave(name.trim(), normalizeUrl(url), icon));
   }
-  const title = shortcut ? "编辑常用网站" : "添加常用网站";
+  const title = shortcut ? m.editor.titles.edit : m.editor.titles.add;
   return (
     <Modal
       label={title}
@@ -96,7 +98,7 @@ export function ShortcutEditor({
               icon={<Trash2 size={15} />}
               {...base}
             >
-              {confirmDelete ? "确认移除" : "移除"}
+              {confirmDelete ? m.editor.remove : m.common.actions.remove}
             </GlassButton>
           )}
           <div className="button-pair push-right">
@@ -108,7 +110,7 @@ export function ShortcutEditor({
               disabled={busy}
               {...base}
             >
-              取消
+              {m.common.actions.cancel}
             </GlassButton>
             <GlassButton
               type="submit"
@@ -117,45 +119,51 @@ export function ShortcutEditor({
               disabled={busy}
               {...base}
             >
-              {busy ? "保存中…" : "保存网站"}
+              {busy ? m.common.actions.saving : m.editor.save}
             </GlassButton>
           </div>
         </>
       }
     >
-      <p className="dialog-description">把喜欢的网站，放在触手可及的地方。</p>
+      <p className="dialog-description">{m.editor.description}</p>
       <form id="shortcut-form" onSubmit={submit} className="shortcut-form">
         <GlassLightGroup>
-          <label htmlFor="shortcut-name">网站名称</label>
+          <label htmlFor="shortcut-name">{m.editor.name.label}</label>
           <GlassInput
             id="shortcut-name"
             data-initial-focus
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={40}
-            placeholder="例如：我的书房"
+            placeholder={m.editor.name.placeholder}
             invalid={Boolean(error)}
             disabled={busy}
             trailing={
               name ? (
-                <ClearButton label="清空网站名称" onClear={() => setName("")} />
+                <ClearButton
+                  label={m.editor.name.clearAria}
+                  onClear={() => setName("")}
+                />
               ) : undefined
             }
             {...base}
           />
-          <label htmlFor="shortcut-url">网站地址</label>
+          <label htmlFor="shortcut-url">{m.editor.url.label}</label>
           <GlassInput
             id="shortcut-url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             maxLength={2048}
-            placeholder="example.com"
+            placeholder={m.editor.url.placeholder}
             leading={<Link size={16} />}
             invalid={Boolean(error)}
             disabled={busy}
             trailing={
               url ? (
-                <ClearButton label="清空网站地址" onClear={() => setUrl("")} />
+                <ClearButton
+                  label={m.editor.url.clearAria}
+                  onClear={() => setUrl("")}
+                />
               ) : undefined
             }
             {...base}
@@ -172,8 +180,8 @@ export function ShortcutEditor({
                 )}
               </span>
               <div className="editor-icon-text">
-                <label htmlFor="shortcut-icon">网站图标</label>
-                <p>留空时使用网站自己的图标</p>
+                <label htmlFor="shortcut-icon">{m.editor.icon.label}</label>
+                <p>{m.editor.icon.hint}</p>
               </div>
               <div className="button-pair">
                 {icon && (
@@ -185,7 +193,7 @@ export function ShortcutEditor({
                     onClick={() => setIcon("")}
                     {...base}
                   >
-                    恢复默认
+                    {m.editor.icon.restoreDefault}
                   </GlassButton>
                 )}
                 <GlassButton
@@ -195,7 +203,7 @@ export function ShortcutEditor({
                   onClick={() => iconInput.current?.click()}
                   {...base}
                 >
-                  {icon ? "替换图标" : "上传图标"}
+                  {icon ? m.editor.icon.replace : m.editor.icon.upload}
                 </GlassButton>
               </div>
               <input
@@ -204,7 +212,7 @@ export function ShortcutEditor({
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 hidden
-                aria-label="上传网站图标"
+                aria-label={m.editor.icon.uploadAria}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   e.target.value = "";
@@ -216,7 +224,7 @@ export function ShortcutEditor({
           {shortcut && (
             <div className="editor-order">
               <span>
-                排列位置{" "}
+                {m.editor.order.label}{" "}
                 <b>
                   {index + 1} / {total}
                 </b>
@@ -227,7 +235,7 @@ export function ShortcutEditor({
                   variant="icon"
                   size="sm"
                   className="plain-icon"
-                  aria-label="向前移动"
+                  aria-label={m.editor.order.moveUpAria}
                   disabled={busy || index <= 0}
                   onClick={() => void run(() => onMove(-1), false)}
                   icon={<ArrowUp size={17} />}
@@ -238,7 +246,7 @@ export function ShortcutEditor({
                   variant="icon"
                   size="sm"
                   className="plain-icon"
-                  aria-label="向后移动"
+                  aria-label={m.editor.order.moveDownAria}
                   disabled={busy || index >= total - 1}
                   onClick={() => void run(() => onMove(1), false)}
                   icon={<ArrowDown size={17} />}
@@ -254,7 +262,7 @@ export function ShortcutEditor({
           )}
           {confirmDelete && (
             <GlassAlert tone="warning" role="status" {...base}>
-              确定移除“{shortcut?.name}”？
+              {m.editor.confirmRemove(shortcut?.name ?? "")}
             </GlassAlert>
           )}
         </GlassLightGroup>

@@ -10,6 +10,7 @@ const ctx = await chromium.launchPersistentContext(
     channel: "chrome",
     headless: true,
     viewport: { width: 1366, height: 768 },
+    locale: "zh-CN",
     args: ["--enable-unsafe-extension-debugging"],
     ignoreDefaultArgs: ["--disable-extensions"],
   },

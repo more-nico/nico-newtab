@@ -27,6 +27,8 @@ import type {
   GlassSettings,
 } from "../types";
 import { MAX_BACKUP_BYTES, parseBackup } from "../lib/validation";
+import { artworkOf, t } from "../lib/i18n";
+import { privacyUrl } from "../lib/urls";
 import { Modal } from "./Modal";
 import { SearchEngineSettings } from "./SearchEngineSettings";
 import { NutstoreSync, type NutstoreSyncProps } from "./NutstoreSync";
@@ -64,6 +66,7 @@ export function Settings({
   const uploadRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const { base } = useGlassMaterial();
+  const m = t();
   async function run(action: () => Promise<void>, success = "") {
     setBusy(true);
     setError("");
@@ -72,7 +75,7 @@ export function Settings({
       await action();
       setNotice(success);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "操作失败，请重试。");
+      setError(e instanceof Error ? e.message : m.settings.panel.errors.action);
     } finally {
       setBusy(false);
     }
@@ -80,7 +83,7 @@ export function Settings({
   function change(patch: AppSettingsPatch) {
     setError("");
     void onChange(patch).catch((e) =>
-      setError(e instanceof Error ? e.message : "设置保存失败。"),
+      setError(e instanceof Error ? e.message : m.settings.panel.errors.save),
     );
   }
   function changeGlass<K extends keyof GlassSettings>(
@@ -92,9 +95,10 @@ export function Settings({
   const select = (wallpaper: string) =>
     change({ wallpaper, positionX: 50, positionY: 50 });
   const art = ARTWORKS.find((a) => a.id === settings.wallpaper);
+  const caption = art ? artworkOf(art.id) : undefined;
   return (
     <Modal
-      label="设置"
+      label={m.settings.panel.title}
       wide
       onClose={() => {
         if (!busy) onClose();
@@ -104,7 +108,7 @@ export function Settings({
           className="settings-tabs"
           size="sm"
           cornerRadius={26}
-          aria-label="设置分类"
+          aria-label={m.settings.panel.tabsAria}
           value={tab}
           onChange={(key) => setTab(key as SettingsTab)}
           onKeyDown={(e) => {
@@ -128,12 +132,24 @@ export function Settings({
               [ids.indexOf(next)]?.focus();
           }}
           items={[
-            { key: "appearance", label: "外观", icon: <Images size={15} /> },
-            { key: "features", label: "功能", icon: <Palette size={15} /> },
-            { key: "sync", label: "同步", icon: <Cloud size={15} /> },
+            {
+              key: "appearance",
+              label: m.settings.panel.tabs.appearance,
+              icon: <Images size={15} />,
+            },
+            {
+              key: "features",
+              label: m.settings.panel.tabs.features,
+              icon: <Palette size={15} />,
+            },
+            {
+              key: "sync",
+              label: m.settings.panel.tabs.sync,
+              icon: <Cloud size={15} />,
+            },
             {
               key: "about",
-              label: "关于",
+              label: m.settings.panel.tabs.about,
               icon: <SlidersHorizontal size={15} />,
             },
           ]}
@@ -149,10 +165,10 @@ export function Settings({
               <CheckCheck size={14} />
             )}
             {busy
-              ? "正在处理…"
+              ? m.settings.panel.status.busy
               : saving
-                ? "正在保存…"
-                : "更改自动保存在此浏览器"}
+                ? m.settings.panel.status.saving
+                : m.settings.panel.status.autoSave}
           </span>
           <GlassButton
             size="sm"
@@ -161,7 +177,7 @@ export function Settings({
             onClick={onClose}
             {...base}
           >
-            完成
+            {m.common.actions.done}
           </GlassButton>
         </>
       }
@@ -172,13 +188,13 @@ export function Settings({
             {tab === "appearance" && (
               <>
                 <div className="section-heading">
-                  <h3>把艺术，留在日常</h3>
-                  <span>馆藏 · 公有领域</span>
+                  <h3>{m.settings.appearance.heading.title}</h3>
+                  <span>{m.settings.appearance.heading.note}</span>
                 </div>
                 <GlassSegmentedControl
                   className="wallpaper-picker"
                   cornerRadius={26}
-                  aria-label="选择壁纸"
+                  aria-label={m.settings.appearance.wallpaperAria}
                   value={settings.wallpaper}
                   onChange={select}
                   items={[
@@ -186,7 +202,7 @@ export function Settings({
                       key: a.id,
                       label: (
                         <span className="wallpaper-slot-label">
-                          {a.shortTitle}
+                          {artworkOf(a.id).shortTitle}
                         </span>
                       ),
                       icon: (
@@ -203,7 +219,7 @@ export function Settings({
                             key: "custom",
                             label: (
                               <span className="wallpaper-slot-label">
-                                我的图片
+                                {m.settings.appearance.customSlot}
                               </span>
                             ),
                             icon: customUrl ? (
@@ -222,30 +238,26 @@ export function Settings({
                   {...base}
                 />
                 <p className="setting-hint">
-                  {art ? (
+                  {art && caption ? (
                     <>
                       <span>
-                        {art.title} ·{" "}
-                        {art.artist
-                          .replace("克劳德 · ", "")
-                          .replace("古斯塔夫 · ", "")}{" "}
-                        · {art.year}
+                        {caption.title} · {caption.artistShort} · {art.year}
                       </span>
                       <a href={art.source} target="_blank" rel="noreferrer">
-                        查看馆藏 ↗
+                        {m.common.source.viewCollectionWithArrow}
                       </a>
                     </>
                   ) : (
                     <>
                       <span>{settings.customWallpaper?.name}</span>
-                      <span>仅保存在当前浏览器</span>
+                      <span>{m.settings.appearance.customSavedLocally}</span>
                     </>
                   )}
                 </p>
                 <div className="setting-row">
                   <div>
-                    <label>我的图片</label>
-                    <p>JPG、PNG 或 WebP，最大 20 MB</p>
+                    <label>{m.settings.appearance.customSlot}</label>
+                    <p>{m.settings.appearance.upload.hint}</p>
                   </div>
                   <GlassButton
                     size="sm"
@@ -253,7 +265,9 @@ export function Settings({
                     onClick={() => uploadRef.current?.click()}
                     {...base}
                   >
-                    {settings.customWallpaper ? "替换图片" : "上传图片"}
+                    {settings.customWallpaper
+                      ? m.settings.appearance.upload.replace
+                      : m.settings.appearance.upload.upload}
                   </GlassButton>
                 </div>
                 <input
@@ -261,36 +275,45 @@ export function Settings({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   hidden
-                  aria-label="上传壁纸文件"
+                  aria-label={m.settings.appearance.upload.aria}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     e.target.value = "";
                     if (file)
-                      void run(() => onUpload(file), "图片已保存到本地。");
+                      void run(
+                        () => onUpload(file),
+                        m.settings.appearance.upload.success,
+                      );
                   }}
                 />
                 <div className="setting-row">
                   <div>
-                    <label>画面适配</label>
-                    <p>铺满屏幕，或保留完整画作</p>
+                    <label>{m.settings.appearance.fit.title}</label>
+                    <p>{m.settings.appearance.fit.hint}</p>
                   </div>
                   <GlassSegmentedControl
                     size="sm"
-                    aria-label="画面适配"
+                    aria-label={m.settings.appearance.fit.title}
                     value={settings.fit}
                     onChange={(value) =>
                       change({ fit: value as AppSettings["fit"] })
                     }
                     items={[
-                      { key: "cover", label: "铺满" },
-                      { key: "contain", label: "完整" },
+                      {
+                        key: "cover",
+                        label: m.settings.appearance.fit.cover,
+                      },
+                      {
+                        key: "contain",
+                        label: m.settings.appearance.fit.contain,
+                      },
                     ]}
                     {...base}
                   />
                 </div>
                 <div className="field-grid">
                   <Range
-                    label="水平位置"
+                    label={m.settings.appearance.position.x}
                     value={settings.positionX}
                     min={0}
                     max={100}
@@ -298,7 +321,7 @@ export function Settings({
                     onChange={(positionX) => change({ positionX })}
                   />
                   <Range
-                    label="垂直位置"
+                    label={m.settings.appearance.position.y}
                     value={settings.positionY}
                     min={0}
                     max={100}
@@ -308,7 +331,7 @@ export function Settings({
                 </div>
                 <div className="field-grid">
                   <Range
-                    label="壁纸亮度"
+                    label={m.settings.appearance.wallpaperStyle.brightness}
                     value={settings.brightness}
                     min={35}
                     max={120}
@@ -316,7 +339,7 @@ export function Settings({
                     onChange={(brightness) => change({ brightness })}
                   />
                   <Range
-                    label="壁纸模糊"
+                    label={m.settings.appearance.wallpaperStyle.blur}
                     value={settings.blur}
                     min={0}
                     max={20}
@@ -326,59 +349,72 @@ export function Settings({
                 </div>
                 <p className="artwork-source">
                   <Info size={13} />
-                  {art
-                    ? `${art.museum} · 公有领域图像`
-                    : "你的图片仅保存在当前浏览器。"}
+                  {caption
+                    ? `${caption.museum} · ${m.common.source.publicDomainImage}`
+                    : m.settings.appearance.customOnly}
                 </p>
                 <div className="section-heading">
-                  <h3>找到舒服的光与影</h3>
-                  <span>实时预览</span>
+                  <h3>{m.settings.appearance.optics.title}</h3>
+                  <span>{m.settings.appearance.optics.note}</span>
                 </div>
                 <div className="setting-row">
                   <div>
-                    <label>玻璃明暗</label>
-                    <p>自动 = Auto，跟随壁纸；浅色 = Light，深色 = Dark</p>
+                    <label>{m.settings.appearance.glassMode.title}</label>
+                    <p>{m.settings.appearance.glassMode.hint}</p>
                   </div>
                   <GlassSegmentedControl
                     size="sm"
-                    aria-label="玻璃明暗"
+                    aria-label={m.settings.appearance.glassMode.title}
                     value={settings.glassMode}
                     onChange={(value) =>
                       change({ glassMode: value as AppSettings["glassMode"] })
                     }
                     items={[
-                      { key: "auto", label: "自动" },
-                      { key: "light", label: "浅色" },
-                      { key: "dark", label: "深色" },
+                      {
+                        key: "auto",
+                        label: m.settings.appearance.glassMode.auto,
+                      },
+                      {
+                        key: "light",
+                        label: m.settings.appearance.glassMode.light,
+                      },
+                      {
+                        key: "dark",
+                        label: m.settings.appearance.glassMode.dark,
+                      },
                     ]}
                     {...base}
                   />
                 </div>
                 <div className="setting-row">
                   <div>
-                    <label>玻璃质感</label>
-                    <p>轻盈只保留模糊与折射，细腻额外开启色散与弹性</p>
+                    <label>{m.settings.appearance.quality.title}</label>
+                    <p>{m.settings.appearance.quality.hint}</p>
                   </div>
                   <GlassSegmentedControl
                     size="sm"
-                    aria-label="玻璃质感"
+                    aria-label={m.settings.appearance.quality.title}
                     value={settings.quality}
                     onChange={(value) =>
                       change({ quality: value as AppSettings["quality"] })
                     }
                     items={[
-                      { key: "low", label: "轻盈" },
-                      { key: "high", label: "细腻" },
+                      {
+                        key: "low",
+                        label: m.settings.appearance.quality.low,
+                      },
+                      {
+                        key: "high",
+                        label: m.settings.appearance.quality.high,
+                      },
                     ]}
                     {...base}
                   />
                 </div>
                 <div className="optics-heading">
                   <div>
-                    <h3>玻璃光学参数</h3>
-                    <p>
-                      参数范围、步进与默认值和 glass-kit playground 完全一致
-                    </p>
+                    <h3>{m.settings.appearance.glassParams.title}</h3>
+                    <p>{m.settings.appearance.glassParams.note}</p>
                   </div>
                   <GlassButton
                     type="button"
@@ -393,12 +429,12 @@ export function Settings({
                     }
                     {...base}
                   >
-                    恢复 Playground 默认值
+                    {m.settings.appearance.glassParams.reset}
                   </GlassButton>
                 </div>
                 <div className="field-grid">
                   <Range
-                    label="模糊 Blur"
+                    label={m.settings.appearance.glassParams.blur}
                     value={settings.glass.blur}
                     min={0}
                     max={64}
@@ -407,7 +443,7 @@ export function Settings({
                     onChange={(value) => changeGlass("blur", value)}
                   />
                   <Range
-                    label="饱和度 Saturation"
+                    label={m.settings.appearance.glassParams.saturation}
                     value={settings.glass.saturation}
                     min={0}
                     max={300}
@@ -416,7 +452,7 @@ export function Settings({
                     onChange={(value) => changeGlass("saturation", value)}
                   />
                   <Range
-                    label="亮度 Brightness"
+                    label={m.settings.appearance.glassParams.brightness}
                     value={settings.glass.brightness}
                     min={0}
                     max={2}
@@ -425,7 +461,7 @@ export function Settings({
                     onChange={(value) => changeGlass("brightness", value)}
                   />
                   <Range
-                    label="贴图精度 Map scale"
+                    label={m.settings.appearance.glassParams.mapScale}
                     value={settings.glass.mapScale}
                     min={0.1}
                     max={0.5}
@@ -435,12 +471,14 @@ export function Settings({
                   />
                 </div>
                 <div className="optics-subheading">
-                  <span>折射</span>
-                  <small>贴图精度越高，边缘越清晰，也会增加渲染开销</small>
+                  <span>{m.settings.appearance.glassParams.refraction}</span>
+                  <small>
+                    {m.settings.appearance.glassParams.mapScaleNote}
+                  </small>
                 </div>
                 <div className="field-grid">
                   <Range
-                    label="折射带 Depth"
+                    label={m.settings.appearance.glassParams.depth}
                     value={settings.glass.depth}
                     min={0}
                     max={40}
@@ -449,7 +487,7 @@ export function Settings({
                     onChange={(value) => changeGlass("depth", value)}
                   />
                   <Range
-                    label="曲率 Curvature"
+                    label={m.settings.appearance.glassParams.curvature}
                     value={settings.glass.curvature}
                     min={0}
                     max={1}
@@ -458,7 +496,7 @@ export function Settings({
                     onChange={(value) => changeGlass("curvature", value)}
                   />
                   <Range
-                    label="色散 Dispersion"
+                    label={m.settings.appearance.glassParams.dispersion}
                     value={settings.glass.dispersion}
                     min={0}
                     max={1}
@@ -468,12 +506,14 @@ export function Settings({
                   />
                 </div>
                 <div className="optics-subheading">
-                  <span>交互</span>
-                  <small>色散和弹性仅在“细腻”玻璃档位生效</small>
+                  <span>{m.settings.appearance.glassParams.interaction}</span>
+                  <small>
+                    {m.settings.appearance.glassParams.interactionNote}
+                  </small>
                 </div>
                 <div className="field-grid">
                   <Range
-                    label="高光 Highlight"
+                    label={m.settings.appearance.glassParams.highlight}
                     value={settings.glass.highlight}
                     min={0}
                     max={2}
@@ -482,7 +522,7 @@ export function Settings({
                     onChange={(value) => changeGlass("highlight", value)}
                   />
                   <Range
-                    label="弹性 Elasticity"
+                    label={m.settings.appearance.glassParams.elasticity}
                     value={settings.glass.elasticity}
                     min={0}
                     max={0.5}
@@ -496,7 +536,7 @@ export function Settings({
                   cornerRadius={26}
                   {...base}
                 >
-                  玻璃效果会根据浏览器能力自动适配。系统开启“减少动态效果”时，页面会减少动画。
+                  {m.settings.appearance.glassParams.environmentNote}
                 </GlassSurface>
               </>
             )}
@@ -504,12 +544,12 @@ export function Settings({
               <>
                 <div className="setting-row">
                   <div>
-                    <label>时间格式</label>
-                    <p>使用设备的本地时间</p>
+                    <label>{m.settings.features.clockFormat.title}</label>
+                    <p>{m.settings.features.clockFormat.hint}</p>
                   </div>
                   <GlassSegmentedControl
                     size="sm"
-                    aria-label="时间格式"
+                    aria-label={m.settings.features.clockFormat.title}
                     value={settings.clockFormat}
                     onChange={(value) =>
                       change({
@@ -517,15 +557,21 @@ export function Settings({
                       })
                     }
                     items={[
-                      { key: "24", label: "24 小时" },
-                      { key: "12", label: "12 小时" },
+                      {
+                        key: "24",
+                        label: m.settings.features.clockFormat.h24,
+                      },
+                      {
+                        key: "12",
+                        label: m.settings.features.clockFormat.h12,
+                      },
                     ]}
                     {...base}
                   />
                 </div>
                 <div className="clock-tint-control">
                   <Range
-                    label="时钟 Tint 强度"
+                    label={m.settings.features.clockTint}
                     value={settings.clockTintStrength * 100}
                     min={0}
                     max={100}
@@ -537,8 +583,8 @@ export function Settings({
                   />
                 </div>
                 <div className="optics-subheading">
-                  <span>搜索引擎</span>
-                  <small>自定义搜索地址；自定义引擎不提供搜索建议</small>
+                  <span>{m.settings.features.searchEngines.title}</span>
+                  <small>{m.settings.features.searchEngines.note}</small>
                 </div>
                 <SearchEngineSettings
                   settings={settings}
@@ -551,8 +597,8 @@ export function Settings({
             {tab === "about" && (
               <>
                 <div className="section-heading">
-                  <h3>把喜欢的，妥善收藏</h3>
-                  <span>仅保存在本地</span>
+                  <h3>{m.settings.about.heading.title}</h3>
+                  <span>{m.settings.about.heading.note}</span>
                 </div>
                 <GlassSurface
                   className="backup-card"
@@ -563,15 +609,17 @@ export function Settings({
                     <ArrowDownToLine size={23} />
                   </span>
                   <div>
-                    <strong>导出备份</strong>
-                    <p>包含常用网站、全部设置和自定义壁纸。</p>
+                    <strong>{m.settings.about.export.title}</strong>
+                    <p>{m.settings.about.export.description}</p>
                   </div>
                   <GlassButton
                     size="sm"
-                    onClick={() => void run(onExport, "备份文件已导出。")}
+                    onClick={() =>
+                      void run(onExport, m.settings.about.export.success)
+                    }
                     {...base}
                   >
-                    导出
+                    {m.settings.about.export.button}
                   </GlassButton>
                 </GlassSurface>
                 <GlassSurface
@@ -583,15 +631,15 @@ export function Settings({
                     <ArrowUpFromLine size={23} />
                   </span>
                   <div>
-                    <strong>从备份恢复</strong>
-                    <p>导入 Nico 的 JSON 备份文件，最大 32 MB。</p>
+                    <strong>{m.settings.about.import.title}</strong>
+                    <p>{m.settings.about.import.description}</p>
                   </div>
                   <GlassButton
                     size="sm"
                     onClick={() => importRef.current?.click()}
                     {...base}
                   >
-                    导入
+                    {m.settings.about.import.button}
                   </GlassButton>
                 </GlassSurface>
                 <input
@@ -599,14 +647,14 @@ export function Settings({
                   type="file"
                   accept="application/json,.json"
                   hidden
-                  aria-label="导入备份文件"
+                  aria-label={m.settings.about.import.aria}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     e.target.value = "";
                     if (file)
                       void run(async () => {
                         if (file.size > MAX_BACKUP_BYTES)
-                          throw new Error("备份文件最大支持 32 MB。");
+                          throw new Error(m.settings.about.import.tooLarge);
                         setPendingBackup(parseBackup(await file.text()));
                       });
                   }}
@@ -615,18 +663,16 @@ export function Settings({
                   <GlassSurface
                     className="import-confirm"
                     role="region"
-                    aria-label="确认恢复备份"
+                    aria-label={m.settings.about.import.confirmAria}
                     cornerRadius={26}
                     {...base}
                   >
-                    <strong>用这份备份替换当前内容？</strong>
+                    <strong>{m.settings.about.import.confirmTitle}</strong>
                     <p>
-                      将恢复 {pendingBackup.state.shortcuts.length}{" "}
-                      个网站、全部外观设置
-                      {pendingBackup.wallpaper
-                        ? "和一张自定义壁纸"
-                        : "；当前上传的壁纸将被移除"}
-                      。建议先导出当前备份。
+                      {m.settings.about.import.summary(
+                        pendingBackup.state.shortcuts.length,
+                        Boolean(pendingBackup.wallpaper),
+                      )}
                     </p>
                     <div className="button-pair">
                       <GlassButton
@@ -635,7 +681,7 @@ export function Settings({
                         onClick={() => setPendingBackup(null)}
                         {...base}
                       >
-                        取消
+                        {m.common.actions.cancel}
                       </GlassButton>
                       <GlassButton
                         className="primary-button"
@@ -643,11 +689,11 @@ export function Settings({
                           void run(async () => {
                             await onImport(pendingBackup);
                             setPendingBackup(null);
-                          }, "备份已恢复。")
+                          }, m.settings.about.import.success)
                         }
                         {...base}
                       >
-                        确认替换并恢复
+                        {m.settings.about.import.confirm}
                       </GlassButton>
                     </div>
                   </GlassSurface>
@@ -657,17 +703,22 @@ export function Settings({
                   cornerRadius={26}
                   {...base}
                 >
-                  无需账号，不收集使用数据。卸载扩展会清除本地内容，请提前备份。
+                  {m.settings.about.privacyNote}
                 </GlassSurface>
                 <div className="about-line">
                   <span className="mini-wordmark">nico.</span>
-                  <span>印象新标签页 · 1.0.0</span>
+                  <span>{m.settings.about.version}</span>
                   <a
                     href="THIRD_PARTY_NOTICES.md"
                     target="_blank"
                     rel="noreferrer"
                   >
-                    素材与开源许可 ↗
+                    {m.settings.about.thirdPartyNotices}
+                  </a>
+                </div>
+                <div className="about-line">
+                  <a href={privacyUrl()} target="_blank" rel="noreferrer">
+                    {m.settings.about.privacyPolicy}
                   </a>
                 </div>
               </>

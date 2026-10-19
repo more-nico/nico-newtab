@@ -7,6 +7,7 @@ const browser = await chromium.launchPersistentContext("", {
   channel: "chromium",
   headless: true,
   viewport: { width: 1440, height: 960 },
+  locale: "zh-CN",
   args: [
     `--disable-extensions-except=${resolve("dist")}`,
     `--load-extension=${resolve("dist")}`,

@@ -1,6 +1,7 @@
 import { defaultState } from "../data";
 import type { AppState } from "../types";
 import { parseState } from "./validation";
+import { t } from "./i18n";
 
 export interface StateStorage {
   read(): Promise<unknown>;
@@ -50,9 +51,9 @@ export class Repository {
       const previous = await this.load();
       const next = parseState(change(structuredClone(previous)));
       const newId = next.settings.customWallpaper?.assetId;
-      if (blob && !newId) throw new Error("缺少壁纸信息。");
+      if (blob && !newId) throw new Error(t().lib.persistence.missingWallpaper);
       if (blob && newId === previous.settings.customWallpaper?.assetId)
-        throw new Error("新壁纸需要独立的存储标识。");
+        throw new Error(t().lib.persistence.wallpaperIdConflict);
       if (blob && newId) await this.assets.put(newId, blob);
       try {
         await this.storage.write(next);
@@ -72,7 +73,7 @@ export class Repository {
       const state = await this.load();
       const id = state.settings.customWallpaper?.assetId;
       const blob = id ? await this.assets.get(id) : null;
-      if (id && !blob) throw new Error("自定义壁纸丢失，请重新上传后再备份。");
+      if (id && !blob) throw new Error(t().lib.persistence.wallpaperMissing);
       return { state, blob: blob ?? null };
     });
   }

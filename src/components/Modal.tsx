@@ -8,6 +8,7 @@ import {
 import { GlassButton, GlassSurface } from "nico-glass-kit";
 import { X } from "lucide-react";
 import { useGlassMaterial } from "../lib/glass";
+import { t } from "../lib/i18n";
 
 /** Leave animation length; keep in sync with the .nico-* keyframes. */
 const LEAVE_MS = 180;
@@ -39,6 +40,7 @@ export function Modal({
   const host = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const { base, panel } = useGlassMaterial();
+  const m = t();
   const [leaving, setLeaving] = useState(false);
   const closed = useRef(false);
   // Keep the callback out of the effect deps so the trap mounts only once.
@@ -132,9 +134,7 @@ export function Modal({
       requestAnimationFrame(() => {
         if (previous?.isConnected) previous.focus();
         else
-          document
-            .querySelector<HTMLElement>('[aria-label="添加常用网站"]')
-            ?.focus();
+          document.querySelector<HTMLElement>(".add-shortcut button")?.focus();
       });
     };
   }, [dismiss]);
@@ -160,7 +160,7 @@ export function Modal({
             variant="icon"
             size="lg"
             className="dialog-close"
-            aria-label="关闭"
+            aria-label={m.common.actions.close}
             icon={<X size={19} strokeWidth={1.8} />}
             onClick={dismiss}
             {...base}

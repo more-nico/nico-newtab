@@ -1,4 +1,5 @@
 import type { AppState, BackupV1 } from "../types";
+import { t } from "./i18n";
 import { blobToDataUrl } from "./images";
 import {
   NUTSTORE_SERVER_URL,
@@ -157,12 +158,12 @@ export async function fingerprintBackup(backup: BackupV1): Promise<string> {
   );
 }
 
-/** 远端 JSON → BackupV1，直接复用 parseBackup，错误转成中文提示。 */
+/** Remote JSON → BackupV1, reusing parseBackup; failures become a friendly message. */
 export function parseSyncFile(text: string): BackupV1 {
   try {
     return parseBackup(text);
   } catch {
-    throw new Error("云端备份内容不完整或格式不受支持，未改动本机数据。");
+    throw new Error(t().sync.errors.parseInvalid);
   }
 }
 

@@ -1,0 +1,8 @@
+{
+  "extName": { "message": "Nico · Impression New Tab" },
+  "extShortName": { "message": "Nico New Tab" },
+  "extDescription": {
+    "message": "A local-first new tab page with Monet paintings, interactive glass, a clock, search and your favorite sites."
+  },
+  "actionTitle": { "message": "Add to Nico" }
+}

@@ -18,6 +18,7 @@ import { ARTWORKS, defaultState } from "../data";
 import type { AppState } from "../types";
 import { normalizeUrl } from "../lib/validation";
 import { isExtension, loadFavicon, repository } from "../lib/platform";
+import { t } from "../lib/i18n";
 import { pickExtensionTab } from "../lib/tabs";
 import {
   GlassMaterialProvider,
@@ -55,6 +56,7 @@ function useReducedMotion(): boolean {
  * new tab page itself can never see it.
  */
 export function Popup() {
+  const m = t();
   const [state, setState] = useState<AppState>(defaultState);
   const [status, setStatus] = useState<Status>("loading");
   const [page, setPage] = useState<{ url: string; title: string } | null>(null);
@@ -73,7 +75,7 @@ export function Popup() {
       try {
         loaded = await repository.load();
       } catch {
-        setError("本地数据暂时读不出来，稍后再试。");
+        setError(m.popup.errors.loadFailed);
       }
       let tab: { url?: string; title?: string } | undefined;
       try {
@@ -126,7 +128,7 @@ export function Popup() {
     if (!page) return;
     const value = name.trim();
     if (!value) {
-      setError("给这个网站取一个名字吧。");
+      setError(m.popup.errors.emptyName);
       return;
     }
     setError("");
@@ -134,16 +136,16 @@ export function Popup() {
       const url = normalizeUrl(page.url);
       await repository.update((current) => {
         if (current.shortcuts.some((item) => item.url === url))
-          throw new Error("这个网站已经在列表里了。");
+          throw new Error(m.popup.errors.duplicate);
         if (current.shortcuts.length >= MAX_SHORTCUTS)
-          throw new Error(`最多可添加 ${MAX_SHORTCUTS} 个网站。`);
+          throw new Error(m.popup.errors.maxShortcuts(MAX_SHORTCUTS));
         current.shortcuts.push({ id: crypto.randomUUID(), name: value, url });
         return current;
       });
       setStatus("saved");
       window.setTimeout(() => window.close(), 900);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "保存失败，请重试。");
+      setError(e instanceof Error ? e.message : m.popup.errors.saveFailed);
     }
   }
 
@@ -203,7 +205,7 @@ export function Popup() {
               {status === "loading" && (
                 <p className="popup-loading">
                   <LoaderCircle size={15} className="spinning" />
-                  正在读取当前页面…
+                  {m.popup.loading}
                 </p>
               )}
 
@@ -231,7 +233,7 @@ export function Popup() {
                     </GlassSurface>
 
                     <label className="popup-label" htmlFor="popup-name">
-                      网站名称
+                      {m.popup.form.nameLabel}
                     </label>
                     <GlassInput
                       id="popup-name"
@@ -251,10 +253,10 @@ export function Popup() {
                     )}
                     <p className="popup-hint">
                       {status === "duplicate"
-                        ? "这个网站已经在常用网站里了。"
+                        ? m.popup.hints.duplicate
                         : status === "full"
-                          ? `已经放满 ${MAX_SHORTCUTS} 个网站，先在新标签页里整理一下吧。`
-                          : "添加到新标签页的常用网站。"}
+                          ? m.popup.hints.full(MAX_SHORTCUTS)
+                          : m.popup.hints.ready}
                     </p>
 
                     <div className="popup-actions">
@@ -265,7 +267,7 @@ export function Popup() {
                         onClick={() => window.close()}
                         {...material.base}
                       >
-                        取消
+                        {m.common.actions.cancel}
                       </GlassButton>
                       <GlassButton
                         type="submit"
@@ -275,7 +277,7 @@ export function Popup() {
                         icon={<Plus size={14} strokeWidth={1.8} />}
                         {...material.base}
                       >
-                        添加
+                        {m.common.actions.add}
                       </GlassButton>
                     </div>
                   </form>
@@ -286,17 +288,15 @@ export function Popup() {
                   <span className="popup-empty-icon">
                     <Globe size={19} strokeWidth={1.5} />
                   </span>
-                  <strong>这个页面不能添加</strong>
-                  <p>
-                    浏览器内部页面、扩展页面和本地文件都没有可访问的网址。切到普通网页再点一次图标吧。
-                  </p>
+                  <strong>{m.popup.unsupported.title}</strong>
+                  <p>{m.popup.unsupported.body}</p>
                   <GlassButton
                     size="sm"
                     className="text-glass-button"
                     onClick={() => window.close()}
                     {...material.base}
                   >
-                    关闭
+                    {m.common.actions.close}
                   </GlassButton>
                 </div>
               )}
@@ -306,8 +306,8 @@ export function Popup() {
                   <span className="popup-empty-icon is-done">
                     <Check size={19} strokeWidth={1.8} />
                   </span>
-                  <strong>已添加到常用网站</strong>
-                  <p>回到新标签页就能看到它了。</p>
+                  <strong>{m.popup.saved.title}</strong>
+                  <p>{m.popup.saved.body}</p>
                 </div>
               )}
 
@@ -320,7 +320,7 @@ export function Popup() {
                   onClick={() => void jumpToExtensionPage()}
                   {...material.base}
                 >
-                  前往新标签页
+                  {m.popup.actions.goToNewTab}
                 </GlassButton>
               </div>
             </GlassLightGroup>

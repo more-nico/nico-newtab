@@ -76,15 +76,10 @@ export interface AppState {
 }
 export interface Artwork {
   id: string;
-  title: string;
-  /** Compact label for the wallpaper picker segments. */
-  shortTitle: string;
+  /** English catalogue title, kept for the third-party notices and metadata. */
   originalTitle: string;
-  artist: string;
   year: string;
   source: string;
-  museum: string;
-  license: string;
   image: string;
   thumbnail: string;
 }

@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Nico glass wordmark. 300 x 300 viewBox: rounded-square glass plate + "Nico"
+  in Great Vibes script. Fully self-contained: the font is base64-inlined below,
+  so no external file, network request or system font is used.
+
+  Material parameters derived from nico-glass-kit 0.3.2 (.ngs-surface / .ngs-highlight):
+    tint                 rgb(18 20 26)
+    rim-top              rgba(255, 255, 255, 0.5)
+    rim-top-soft         rgba(255, 255, 255, 0.16)
+    rim-edge             rgba(255, 255, 255, 0.28)
+    rim-bottom           rgba(0, 0, 0, 0.22)
+    ring highlight       linear-gradient(160deg, rim-top 0%, rim-edge 22%,
+                         white 4% at 45%, white 2% at 60%, rim-edge 100%) at 0.8 opacity
+    specular             radial-gradient(140px circle, white 65% -> 18% at 40% -> transparent 70%)
+    rest shadow          0 10px 32px rgba(0, 0, 0, 0.34)
+    label                rgba(255, 255, 255, 0.94)
+
+  Typeface: "Great Vibes" by Robert E. Leuschke / TypeSETit, SIL Open Font
+  License 1.1 (OFL). The complete license ships beside the font in
+  assets/fonts/OFL.txt; the glyphs are embedded here (not installed as a
+  system font) so the artwork renders identically everywhere.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300" role="img" aria-label="Nico">
+  <title>Nico</title>
+  <defs>
+    <style><![CDATA[
+      /* Great Vibes, subset to N i c o (OFL 1.1, assets/fonts/OFL.txt).
+         Embedded so the artwork needs no installed font and no network. */
+      @font-face {
+        font-family: "Great Vibes";
+        src: url("data:font/woff2;base64,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") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+      }
+      .wordmark {
+        font-family: "Great Vibes";
+        font-weight: 400;
+        font-style: normal;
+        font-variant-ligatures: none;
+      }
+      .monogram {
+        font-family: "Great Vibes";
+        font-weight: 400;
+        font-style: normal;
+        font-feature-settings: "salt";
+      }
+    ]]></style>
+    <linearGradient id="ngsGlassBase" x1="0.06" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#1f5148"/>
+      <stop offset="0.4" stop-color="#143f3b"/>
+      <stop offset="0.72" stop-color="#0d2f31"/>
+      <stop offset="1" stop-color="#092126"/>
+    </linearGradient>
+    <radialGradient id="ngsGlowCool" cx="0.24" cy="0.18" r="0.64">
+      <stop offset="0" stop-color="#d8fff2" stop-opacity="0.26"/>
+      <stop offset="0.45" stop-color="#8fe8cd" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#8fe8cd" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ngsGlowWarm" cx="0.84" cy="0.9" r="0.58">
+      <stop offset="0" stop-color="#ffd9a8" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#ffd9a8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ngsGlowRose" cx="0.94" cy="0.44" r="0.48">
+      <stop offset="0" stop-color="#e9c6de" stop-opacity="0.09"/>
+      <stop offset="1" stop-color="#e9c6de" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ngsSheen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.2"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ngsStreak" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.35" stop-color="#ffffff" stop-opacity="0.2"/>
+      <stop offset="0.75" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="ngsSpec" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ngsCaustic" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#c9ffe8" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#c9ffe8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ngsPool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#02110f" stop-opacity="0.5"/>
+      <stop offset="0.7" stop-color="#02110f" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#02110f" stop-opacity="0"/>
+    </radialGradient>
+    <!-- edge-only shading: clear face, darker bottom, so it reads as a pane -->
+    <linearGradient id="ngsEdgeShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.26" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.62" stop-color="#000000" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.42"/>
+    </linearGradient>
+    <radialGradient id="ngsInnerShade" cx="0.5" cy="0.42" r="0.76">
+      <stop offset="0.62" stop-color="#00100d" stop-opacity="0"/>
+      <stop offset="1" stop-color="#00100d" stop-opacity="0.26"/>
+    </radialGradient>
+    <linearGradient id="ngsBottomShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.82" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.24"/>
+    </linearGradient>
+    <linearGradient id="ngsRim" x1="0.2" y1="0" x2="0.82" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.52"/>
+      <stop offset="0.22" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0.03"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="ngsRimTopLeft" x1="0" y1="0" x2="0.8" y2="0.8">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="0.4" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ngsInnerRimLight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.7"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ngsInnerRimDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.55" stop-color="#000000" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="ngsOuterRimDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.36"/>
+    </linearGradient>
+    <linearGradient id="ngsDispersion" x1="0" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#8bffe0" stop-opacity="0.32"/>
+      <stop offset="0.5" stop-color="#8bffe0" stop-opacity="0"/>
+      <stop offset="1" stop-color="#ffc894" stop-opacity="0.28"/>
+    </linearGradient>
+    <radialGradient id="ngsGlint" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.7"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ngsInnerGlow" cx="0.5" cy="0.47" r="0.5">
+      <stop offset="0" stop-color="#ffedcf" stop-opacity="0.38"/>
+      <stop offset="0.55" stop-color="#ffedcf" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#ffedcf" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ngsIvory" x1="0.2" y1="0" x2="0.68" y2="1">
+      <stop offset="0" stop-color="#fffdf7"/>
+      <stop offset="0.55" stop-color="#f9efdc"/>
+      <stop offset="1" stop-color="#efdec1"/>
+    </linearGradient>
+    <filter id="ngsSheenBlur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <filter id="ngsSpecBlur" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <filter id="ngsRimLightBlur" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="1.4"/>
+    </filter>
+    <filter id="ngsRimDarkBlur" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+    <filter id="ngsTextShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="2.5" stdDeviation="3.2" flood-color="#00110d" flood-opacity="0.5"/>
+    </filter>
+    <filter id="ngsSoftGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+    <filter id="ngsPlateShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#020c0c" flood-opacity="0.5"/>
+    </filter>
+    <clipPath id="ngsPlateClip">
+      <rect x="8" y="8" width="284" height="284" rx="76"/>
+    </clipPath>
+  </defs>
+  <g filter="url(#ngsPlateShadow)">
+    <g clip-path="url(#ngsPlateClip)">
+      <rect x="8" y="8" width="284" height="284" fill="url(#ngsGlassBase)"/>
+      <rect x="8" y="8" width="284" height="284" fill="url(#ngsGlowCool)"/>
+      <rect x="8" y="8" width="284" height="284" fill="url(#ngsGlowWarm)"/>
+      <rect x="8" y="8" width="284" height="284" fill="url(#ngsGlowRose)"/>
+      <g opacity="1">
+        <ellipse cx="96" cy="64" rx="210" ry="90" fill="url(#ngsSheen)" transform="rotate(-30 96 64)" filter="url(#ngsSheenBlur)"/>
+        <ellipse cx="150" cy="30" rx="158" ry="17" fill="url(#ngsStreak)" transform="rotate(-7 150 30)" filter="url(#ngsSheenBlur)"/>
+        <ellipse cx="140" cy="70" rx="152" ry="13" fill="url(#ngsStreak)" transform="rotate(-13 140 70)" filter="url(#ngsSheenBlur)" opacity="0.8"/>
+        <ellipse cx="118" cy="272" rx="138" ry="44" fill="url(#ngsCaustic)" filter="url(#ngsSheenBlur)"/>
+      </g>
+      
+      <rect x="10" y="10" width="280" height="280" rx="74" fill="none" stroke="url(#ngsEdgeShade)" stroke-width="18" filter="url(#ngsRimDarkBlur)" opacity="0.72"/>
+      <path d="M 282 170 L 282 216 A 66 66 0 0 1 216 282 L 170 282" fill="none" stroke="url(#ngsInnerRimDark)" stroke-width="26" filter="url(#ngsRimDarkBlur)" opacity="0.6"/>
+      <ellipse cx="150" cy="150" rx="144" ry="144" fill="url(#ngsInnerShade)"/>
+      <rect x="8" y="8" width="284" height="284" fill="url(#ngsBottomShade)"/>
+      <ellipse cx="150" cy="146" rx="142" ry="142" fill="url(#ngsInnerGlow)"/>
+      <ellipse cx="88" cy="56" rx="78" ry="46" fill="url(#ngsSpec)" transform="rotate(-28 88 56)" filter="url(#ngsSpecBlur)"/>
+      <ellipse cx="68" cy="48" rx="30" ry="14" fill="url(#ngsGlint)" opacity="0.85" transform="rotate(-30 68 48)"/>
+    </g>
+    <rect x="8" y="8" width="284" height="284" rx="76" fill="none" stroke="url(#ngsRim)" stroke-width="1.8"/>
+    <rect x="10.4" y="10.4" width="279.2" height="279.2" rx="73.6" fill="none" stroke="url(#ngsDispersion)" stroke-width="1.1" opacity="0.7"/>
+    <path d="M 9.6 122 L 9.6 84 A 74.4 74.4 0 0 1 84 9.6 L 122 9.6" fill="none" stroke="url(#ngsInnerRimLight)" stroke-width="3.4" filter="url(#ngsRimLightBlur)" opacity="0.9"/>
+    <path d="M 292 170 L 292 216 A 76 76 0 0 1 216 292 L 170 292" fill="none" stroke="url(#ngsOuterRimDark)" stroke-width="1.6" opacity="0.9"/>
+    <path d="M 8 128 L 8 84 A 76 76 0 0 1 84 8 L 128 8" fill="none" stroke="url(#ngsRimTopLeft)" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+  <text class="wordmark" x="146.5" y="173.5" text-anchor="middle" font-size="106" fill="#ffe6b8" opacity="0.42" filter="url(#ngsSoftGlow)">Nico</text>
+  <text class="wordmark" x="146.5" y="173.5" text-anchor="middle" font-size="106" fill="url(#ngsIvory)" filter="url(#ngsTextShadow)">Nico</text>
+</svg>

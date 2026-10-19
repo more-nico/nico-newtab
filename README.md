@@ -1,10 +1,14 @@
 <div align="center">
 
+<img src="assets/logo/logo-300.png" width="112" alt="Nico logo" />
+
 # Nico · 印象新标签页
 
 **在印象派画作与轻盈玻璃之间，开始新的浏览。**
 
 [Chrome / Edge 120+](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3) · [nico-glass-kit](https://github.com/more-nico/nico-glass-kit) · 本地优先 · MV3
+
+简体中文 · English · 日本語（跟随浏览器语言自动切换）
 
 </div>
 
@@ -95,6 +99,10 @@ Nico 不提供自己的账号服务。需要多设备同步时，可以用坚果
 
 > 坚果云免费账号对 WebDAV 有请求频率和流量限制（例如每 30 分钟 600 次请求），自动同步已经做了防抖和节流。具体限制以[官方说明](https://help.jianguoyun.com/?p=2064)为准。
 
+### 界面语言
+
+扩展界面支持简体中文、English 和 日本語，启动时按浏览器界面语言自动选择：中文 → 简体中文、日文 → 日本語、其他语言 → English。扩展名称、描述与工具栏提示也会随语言本地化（manifest `_locales`）。切换浏览器语言后重新打开新标签页即可生效，无需额外设置。
+
 ## 玻璃材质
 
 Nico 使用 [`nico-glass-kit`](https://github.com/more-nico/nico-glass-kit) 的共享玻璃表面与 `GlassLightGroup`。`overLight="auto"` 会根据玻璃下方实际绘制的背景判断文字、染色、边缘和阴影的明暗；设置为浅色或深色时可以固定结果。
@@ -146,9 +154,14 @@ npm run test:quick   # 单元测试 + TypeScript 类型检查
 npm run build        # 构建可加载的 dist/ 扩展
 npm run record:demos # Playwright 录制文档 GIF
 npm run mock:webdav  # 本地模拟坚果云 WebDAV，供网页预览联调同步
+npm run render:logo   # 从 assets/logo/*.svg 重新生成全部图标 PNG
+node scripts/capture-store-screenshots.mjs  # 生成三语商店截图（需先 build）
+npm run test:i18n    # 构建后用 Chromium 校验 zh-CN / en / ja 三种界面
 npm run test:full    # 提交或打包前的完整检查
 npm run package      # 构建并生成 release/nico-newtab-1.0.0.zip
 ```
+
+界面文案统一放在 `src/lib/i18n/`（zh-CN / en / ja），组件里不要硬编码中文字符串；浏览器脚本固定 `locale: "zh-CN"`，避免 Playwright 默认的 en-US 语言影响既有中文断言。Microsoft Edge 商店的提交材料见 [`docs/edge-store-submission.md`](docs/edge-store-submission.md)。
 
 预览页面使用独立的 `localStorage` / IndexedDB，与扩展数据不互通。预览中提交搜索只显示提示，不会真正跳转；预览没有扩展的跨源权限，因此不会出现搜索建议。
 
@@ -170,6 +183,8 @@ npm run test:full
 
 ## 数据、权限与限制
 
+隐私政策：[简体中文](PRIVACY.zh-CN.md) · [English](PRIVACY.md) · [日本語](PRIVACY.ja.md)。以下为摘要，以隐私政策为准。
+
 - 设置和网站列表保存在 `chrome.storage.local` 的 `nico.newtab.state.v1`。
 - 上传壁纸保存在扩展独立 IndexedDB；导出备份时会以内嵌 WebP 数据带出。
 - 坚果云同步的账号、第三方应用密码、同步目录和上次同步信息单独保存在 `chrome.storage.local` 的 `nico.newtab.sync.v1`，不会写进导出的 JSON 备份。账号和密码以明文保存在本机扩展存储中，请只在可信设备上开启同步；断开连接会清除它们。
@@ -184,17 +199,20 @@ npm run test:full
 
 ```text
 src/components/   设置、网站编辑、弹窗和搜索引擎管理
-src/lib/           校验、持久化、图片处理、平台适配、玻璃材质、坚果云同步
+src/lib/           校验、持久化、图片处理、平台适配、玻璃材质、坚果云同步、i18n
 src/popup/         浏览器工具栏添加网站的小面板
 src/App.tsx        新标签页首页与交互
 public/            MV3 manifest、画作、缩略图、图标和第三方说明
 assets/            README 动态演示 GIF
 scripts/           资源处理、构建打包、预览检查、烟测、GIF 录制和 WebDAV 模拟
-docs/              坚果云同步的接入与实测说明
+docs/              坚果云接入说明、Edge 商店提交材料
+assets/logo/       logo SVG 与导出图
+assets/store/      Edge 商店截图（1280×800，三语）
+assets/fonts/      logo 花体字及其 OFL 许可证
 ```
 
 ## 素材与许可
 
 三幅内置画作来自芝加哥艺术博物馆公开作品信息和 Wikimedia Commons 公有领域复制图；来源、许可证和处理说明见 [`public/THIRD_PARTY_NOTICES.md`](public/THIRD_PARTY_NOTICES.md)。
 
-`nico-glass-kit` 依赖采用 MIT License；本项目使用的画作与运行时依赖以第三方说明为准。`assets/` 中的 GIF 是用本地页面和本项目内置壁纸录制的演示素材。
+Nico 的 logo 为项目原创 SVG（`assets/logo/`），SVG 内嵌的 logo 花体字采用 SIL Open Font License（字体与许可证见 `assets/fonts/`），与界面使用的系统字体相互独立。`nico-glass-kit` 依赖采用 MIT License；本项目使用的画作与运行时依赖以第三方说明为准。`assets/` 中的 GIF 是用本地页面和本项目内置壁纸录制的演示素材。

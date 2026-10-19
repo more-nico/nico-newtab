@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppState, BackupV1 } from "../types";
+import { t } from "./i18n";
 import {
   AUTO_SYNC_DEBOUNCE_MS,
   REMOTE_CHECK_INTERVAL_MS,
@@ -68,7 +69,9 @@ interface RemoteSnapshot {
 const serialize = (backup: BackupV1) => JSON.stringify(backup, null, 2);
 
 function message(error: unknown): string {
-  return error instanceof Error ? error.message : "操作失败，请重试。";
+  return error instanceof Error
+    ? error.message
+    : t().sync.errors.genericFailure;
 }
 
 function credentialsOf(settings: SyncSettings): NutstoreCredentials {
@@ -85,7 +88,7 @@ function parseTime(value: string | null): number {
 }
 
 /**
- * Owns the 坚果云 sync lifecycle for the settings panel and the new-tab page:
+ * Owns the Nutstore sync lifecycle for the settings panel and the new-tab page:
  * connection setup, manual sync/upload/restore, conflict handling and the two
  * background paths (debounced upload after local edits, throttled pull on open).
  *
@@ -146,7 +149,7 @@ export function useNutstoreSync({
   /** Serialises user-initiated operations; background work checks `busyRef`. */
   const guard = useCallback(async (operation: () => Promise<void>) => {
     if (busyRef.current) {
-      setNotice("上一步同步还在进行，请稍候。");
+      setNotice(t().sync.notices.busy);
       return;
     }
     busyRef.current = true;
@@ -224,8 +227,8 @@ export function useNutstoreSync({
         const serverUrl = normalizeServerUrl(input.serverUrl);
         const username = input.username.trim();
         const password = input.password;
-        if (!username) throw new Error("请输入坚果云账号（邮箱）。");
-        if (!password) throw new Error("请输入第三方应用密码。");
+        if (!username) throw new Error(t().sync.errors.usernameRequired);
+        if (!password) throw new Error(t().sync.errors.passwordRequired);
         const next: SyncSettings = {
           ...settingsRef.current,
           enabled: true,
@@ -254,7 +257,7 @@ export function useNutstoreSync({
             lastCheckedAt: now,
           });
           setPending(null);
-          setNotice("已连接坚果云，当前内容已上传。");
+          setNotice(t().sync.notices.connectedUploaded);
           return;
         }
         const same = remote.fingerprint === snapshot.fingerprint;
@@ -267,7 +270,7 @@ export function useNutstoreSync({
         });
         if (same) {
           setPending(null);
-          setNotice("已连接坚果云，云端与当前内容一致。");
+          setNotice(t().sync.notices.connectedSame);
           return;
         }
         setPending({
@@ -277,7 +280,7 @@ export function useNutstoreSync({
           exportedAt: remote.backup.exportedAt,
           localFingerprint: snapshot.fingerprint,
         });
-        setNotice("已连接坚果云。云端已有备份，请选择覆盖方向。");
+        setNotice(t().sync.notices.connectedPending);
       }),
     [fetchRemote, guard, persist],
   );
@@ -291,7 +294,7 @@ export function useNutstoreSync({
         if (choice === "restore") {
           await restoreRef.current(current.backup);
           await rememberSynced({ remote: current.fingerprint }, current.etag);
-          setNotice("已用云端备份覆盖本机内容。");
+          setNotice(t().sync.notices.resolvedRestore);
         } else {
           const snapshot = await snapshotRef.current();
           const written = await uploadFile(
@@ -301,7 +304,7 @@ export function useNutstoreSync({
             current.etag ? { etag: current.etag } : undefined,
           );
           await rememberSynced({ local: snapshot.fingerprint }, written.etag);
-          setNotice("已用本机内容覆盖云端备份。");
+          setNotice(t().sync.notices.resolvedUpload);
         }
         setPending(null);
       }),
@@ -312,7 +315,7 @@ export function useNutstoreSync({
     () =>
       guard(async () => {
         const current = settingsRef.current;
-        if (!current.enabled) throw new Error("请先连接坚果云。");
+        if (!current.enabled) throw new Error(t().sync.errors.notConnected);
         const credentials = credentialsOf(current);
         const now = new Date().toISOString();
         const snapshot = await snapshotRef.current();
@@ -332,7 +335,7 @@ export function useNutstoreSync({
             lastCheckedAt: now,
             lastError: "",
           });
-          setNotice("云端还没有备份，已上传当前内容。");
+          setNotice(t().sync.notices.noRemoteUploaded);
           return;
         }
         const decision = decideSync(
@@ -349,7 +352,7 @@ export function useNutstoreSync({
             lastCheckedAt: now,
             lastError: "",
           });
-          setNotice("本机与云端已一致。");
+          setNotice(t().sync.notices.inSync);
           return;
         }
         if (decision === "upload") {
@@ -367,7 +370,7 @@ export function useNutstoreSync({
             lastCheckedAt: now,
             lastError: "",
           });
-          setNotice("本机改动已上传到坚果云。");
+          setNotice(t().sync.notices.uploadedLocalChanges);
           return;
         }
         if (decision === "download") {
@@ -380,12 +383,10 @@ export function useNutstoreSync({
             lastCheckedAt: now,
             lastError: "",
           });
-          setNotice("已从坚果云恢复云端备份。");
+          setNotice(t().sync.notices.downloaded);
           return;
         }
-        throw new Error(
-          "本机与云端都有改动。请选择「上传本机」或「从云端恢复」来决定保留哪一份。",
-        );
+        throw new Error(t().sync.errors.conflictManual);
       }),
     [fetchRemote, guard, persist],
   );
@@ -394,10 +395,10 @@ export function useNutstoreSync({
     () =>
       guard(async () => {
         const current = settingsRef.current;
-        if (!current.enabled) throw new Error("请先连接坚果云。");
+        if (!current.enabled) throw new Error(t().sync.errors.notConnected);
         const snapshot = await snapshotRef.current();
         await uploadSnapshot(credentialsOf(current), snapshot);
-        setNotice("已上传到坚果云。");
+        setNotice(t().sync.notices.uploaded);
       }),
     [guard, uploadSnapshot],
   );
@@ -406,12 +407,12 @@ export function useNutstoreSync({
     () =>
       guard(async () => {
         const current = settingsRef.current;
-        if (!current.enabled) throw new Error("请先连接坚果云。");
+        if (!current.enabled) throw new Error(t().sync.errors.notConnected);
         const remote = await fetchRemote(credentialsOf(current));
-        if (!remote) throw new Error("云端还没有备份。可以先上传本机内容。");
+        if (!remote) throw new Error(t().sync.errors.noRemote);
         await restoreRef.current(remote.backup);
         await rememberSynced({ remote: remote.fingerprint }, remote.etag);
-        setNotice("已从坚果云恢复备份。");
+        setNotice(t().sync.notices.restored);
       }),
     [fetchRemote, guard, rememberSynced],
   );
@@ -423,7 +424,7 @@ export function useNutstoreSync({
         settingsRef.current = defaultSyncSettings();
         setSettings(defaultSyncSettings());
         setPending(null);
-        setNotice("已断开坚果云同步，本机保存的账号与应用密码已清除。");
+        setNotice(t().sync.notices.disconnected);
       }),
     [guard],
   );
@@ -507,9 +508,7 @@ export function useNutstoreSync({
         } catch (caught) {
           await reportBackgroundError(
             caught instanceof NutstoreError && caught.code === "conflict"
-              ? new Error(
-                  "云端有更新，自动上传已暂停。请到设置 → 同步中手动同步。",
-                )
+              ? new Error(t().sync.errors.autoUploadPaused)
               : caught,
           );
         }
@@ -593,7 +592,7 @@ export function useNutstoreSync({
                 lastCheckedAt: now,
                 lastError: "",
               });
-              setNotice("已从坚果云同步了云端更新。");
+              setNotice(t().sync.notices.remoteUpdate);
             } finally {
               setBusy(false);
             }
@@ -601,9 +600,7 @@ export function useNutstoreSync({
           }
           if (decision === "conflict") {
             await reportBackgroundError(
-              new Error(
-                "云端与本机都有改动，自动同步已暂停。请到设置 → 同步中手动处理。",
-              ),
+              new Error(t().sync.errors.autoSyncPaused),
             );
             return;
           }

@@ -77,11 +77,9 @@ await writeFile(
   "public/wallpapers/sources.json",
   JSON.stringify(attribution, null, 2) + "\n",
 );
-const icon = Buffer.from(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><defs><linearGradient id="b" x2="1" y2="1"><stop stop-color="#abc4b6"/><stop offset="1" stop-color="#586f75"/></linearGradient><linearGradient id="g" x2="0" y2="1"><stop stop-color="#ffffff" stop-opacity=".5"/><stop offset="1" stop-color="#ffffff" stop-opacity=".08"/></linearGradient></defs><rect x="4" y="4" width="120" height="120" rx="34" fill="url(#b)"/><rect x="19" y="19" width="90" height="90" rx="26" fill="url(#g)" stroke="#fff" stroke-opacity=".6"/><path d="M44 86V43h8l25 29V43h8v43h-8L52 57v29z" fill="#fff"/></svg>`,
+// The brand logo and every icon are vector assets rendered by
+// scripts/render-logo.mjs from assets/logo/*.svg. This script only refreshes the
+// wallpapers and their attribution, so it must not overwrite those PNGs.
+console.log(
+  "Wallpapers prepared; icons are rendered by scripts/render-logo.mjs.",
 );
-for (const size of [16, 32, 48, 128])
-  await sharp(icon)
-    .resize(size, size)
-    .png()
-    .toFile(`public/icons/icon-${size}.png`);

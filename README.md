@@ -52,7 +52,7 @@ Nico 是一个 Chrome / Edge 新标签页扩展：用时间、搜索和常用网
 
 需要桌面版 Chrome / Edge 120 或更高版本。
 
-1. 下载并解压 `release/nico-newtab-1.0.0.zip`，或使用构建后的 `dist/` 文件夹。
+1. 从 [GitHub Releases](https://github.com/more-nico/nico-newtab/releases/latest) 下载 `nico-newtab-1.0.0.zip` 并解压，或使用构建后的 `dist/` 文件夹。
 2. 打开 `chrome://extensions` 或 `edge://extensions`。
 3. 开启“开发者模式”，点击“加载已解压的扩展程序”。
 4. 选择包含 `manifest.json` 的 `dist/` 文件夹。

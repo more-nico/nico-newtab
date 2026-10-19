@@ -35,14 +35,16 @@ import {
 import { ARTWORKS, defaultState } from "./data";
 import type { AppSettingsPatch, AppState, BackupV1, Shortcut } from "./types";
 import {
-  blobToDataUrl,
   dataUrlToBlob,
   optimizeImage,
   validateDecodedWallpaper,
 } from "./lib/images";
 import { loadFavicon, isExtension, repository, search } from "./lib/platform";
+import { buildSnapshot } from "./lib/sync";
+import { useNutstoreSync } from "./lib/useNutstoreSync";
 import { listEngines, resolveEngine } from "./lib/engines";
 import { MIN_QUERY_LENGTH, fetchSuggestions } from "./lib/suggest";
+import type { NutstoreSyncProps } from "./components/NutstoreSync";
 import { Settings, type SettingsTab } from "./components/Settings";
 import { ShortcutEditor } from "./components/ShortcutEditor";
 import { ClearButton } from "./components/ClearButton";
@@ -191,6 +193,36 @@ export default function App() {
   // the provider and a `data-light` flag from it.
   const overLight = glassOverLight(s.glassMode);
   const pageLight = useOverLight(overLight, pageShell);
+
+  // The sync controller reads the committed repository state, so it can share
+  // the same backup builder as the JSON export.
+  const getLocalSnapshot = useCallback(async () => {
+    const { state: saved, blob } = await repository.snapshot();
+    return buildSnapshot(saved, blob);
+  }, []);
+  const nutstore = useNutstoreSync({
+    ready,
+    state,
+    getLocalSnapshot,
+    onRestore: importBackup,
+  });
+  // The controller and the panel use different verbs for the same actions;
+  // keep the presentational contract explicit instead of leaking hook naming.
+  const nutstorePanel: NutstoreSyncProps = {
+    settings: nutstore.settings,
+    busy: nutstore.busy,
+    error: nutstore.error,
+    notice: nutstore.notice,
+    pending: nutstore.pending,
+    onConnect: nutstore.connect,
+    onDisconnect: nutstore.disconnect,
+    onSyncNow: nutstore.syncNow,
+    onUpload: nutstore.upload,
+    onRestore: nutstore.restore,
+    onResolvePending: nutstore.resolvePending,
+    onAutoSyncChange: nutstore.setAutoSync,
+    onClearFeedback: nutstore.clearFeedback,
+  };
 
   const refresh = useCallback(async () => {
     const ticket = ++refreshVersion.current;
@@ -395,18 +427,7 @@ export default function App() {
   }
   async function exportBackup() {
     const { state: saved, blob } = await repository.snapshot();
-    const backup: BackupV1 = {
-      format: "nico-newtab",
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      state: saved,
-      wallpaper: blob
-        ? {
-            name: saved.settings.customWallpaper!.name,
-            dataUrl: await blobToDataUrl(blob),
-          }
-        : null,
-    };
+    const { backup } = await buildSnapshot(saved, blob);
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }),
     );
@@ -1019,6 +1040,7 @@ export default function App() {
               onUpload={upload}
               onExport={exportBackup}
               onImport={importBackup}
+              nutstore={nutstorePanel}
               saving={pending > 0}
             />
           )}

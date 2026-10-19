@@ -42,6 +42,22 @@ if (missing.length > 0) {
     `Manifest does not allow every suggestion host.\n  missing: ${missing.join(", ")}\n  host_permissions: ${JSON.stringify(granted)}\n  connect-src: ${JSON.stringify(connectSrc)}\nAdd them to public/manifest.json, then rebuild.`,
   );
 }
+// Same guard for the Nutstore WebDAV endpoint the sync feature ships with.
+const nutstoreSource = await readFile("src/lib/nutstore.ts", "utf8");
+const syncServer = nutstoreSource.match(
+  /NUTSTORE_SERVER_URL\s*=\s*"(https:\/\/[^"]+)"/,
+)?.[1];
+if (!syncServer) {
+  throw new Error(
+    "Could not read NUTSTORE_SERVER_URL from src/lib/nutstore.ts — did the constant move?",
+  );
+}
+const syncOrigin = new URL(syncServer).origin;
+if (!granted.includes(`${syncOrigin}/*`) || !connectSrc.includes(syncOrigin)) {
+  throw new Error(
+    `Manifest does not allow the Nutstore WebDAV host ${syncOrigin}.\n  host_permissions: ${JSON.stringify(granted)}\n  connect-src: ${JSON.stringify(connectSrc)}\nAdd them to public/manifest.json, then rebuild.`,
+  );
+}
 
 const files = {};
 async function collect(dir) {
@@ -60,5 +76,5 @@ const { version } = JSON.parse(await readFile("package.json", "utf8"));
 const path = `release/nico-newtab-${version}.zip`;
 await writeFile(path, zipSync(files, { level: 6 }));
 console.log(
-  `Extension package: ${path} (suggestion hosts granted: ${hosts.join(", ")})`,
+  `Extension package: ${path} (suggestion hosts granted: ${hosts.join(", ")}; sync host: ${syncOrigin})`,
 );

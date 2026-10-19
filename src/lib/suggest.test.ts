@@ -10,6 +10,7 @@ import {
   suggestHosts,
   suggestRequest,
 } from "./suggest";
+import { NUTSTORE_SERVER_URL } from "./nutstore";
 
 const manifest = JSON.parse(
   readFileSync(
@@ -157,6 +158,12 @@ describe("manifest permissions", () => {
       expect(connect).toContain(host);
     }
   });
+  it("grants the Nutstore WebDAV host in both places", () => {
+    const host = new URL(NUTSTORE_SERVER_URL).origin;
+    const connect = manifest.content_security_policy?.extension_pages ?? "";
+    expect(manifest.host_permissions).toContain(`${host}/*`);
+    expect(connect).toContain(host);
+  });
   it("keeps connect-src free of hosts that no endpoint uses", () => {
     const connect = manifest.content_security_policy?.extension_pages ?? "";
     const declared = connect
@@ -165,6 +172,7 @@ describe("manifest permissions", () => {
       .trim()
       .split(/\s+/)
       .filter((source) => source !== "'self'");
-    expect(declared.sort()).toEqual(suggestHosts().sort());
+    const syncHost = new URL(NUTSTORE_SERVER_URL).origin;
+    expect(declared.sort()).toEqual([...suggestHosts(), syncHost].sort());
   });
 });

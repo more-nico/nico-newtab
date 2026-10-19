@@ -11,6 +11,7 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   CheckCheck,
+  Cloud,
   ImagePlus,
   Images,
   Info,
@@ -28,9 +29,10 @@ import type {
 import { MAX_BACKUP_BYTES, parseBackup } from "../lib/validation";
 import { Modal } from "./Modal";
 import { SearchEngineSettings } from "./SearchEngineSettings";
+import { NutstoreSync, type NutstoreSyncProps } from "./NutstoreSync";
 import { useGlassMaterial } from "../lib/glass";
 
-export type SettingsTab = "appearance" | "features" | "about";
+export type SettingsTab = "appearance" | "features" | "sync" | "about";
 export function Settings({
   settings,
   customUrl,
@@ -40,6 +42,7 @@ export function Settings({
   onUpload,
   onExport,
   onImport,
+  nutstore,
   saving,
 }: {
   settings: AppSettings;
@@ -50,6 +53,7 @@ export function Settings({
   onUpload: (file: File) => Promise<void>;
   onExport: () => Promise<void>;
   onImport: (backup: BackupV1) => Promise<void>;
+  nutstore: NutstoreSyncProps;
   saving: boolean;
 }) {
   const [tab, setTab] = useState(initialTab);
@@ -104,7 +108,12 @@ export function Settings({
           value={tab}
           onChange={(key) => setTab(key as SettingsTab)}
           onKeyDown={(e) => {
-            const ids: SettingsTab[] = ["appearance", "features", "about"];
+            const ids: SettingsTab[] = [
+              "appearance",
+              "features",
+              "sync",
+              "about",
+            ];
             if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
             e.preventDefault();
             const next =
@@ -121,6 +130,7 @@ export function Settings({
           items={[
             { key: "appearance", label: "外观", icon: <Images size={15} /> },
             { key: "features", label: "功能", icon: <Palette size={15} /> },
+            { key: "sync", label: "同步", icon: <Cloud size={15} /> },
             {
               key: "about",
               label: "关于",
@@ -537,6 +547,7 @@ export function Settings({
                 />
               </>
             )}
+            {tab === "sync" && <NutstoreSync {...nutstore} />}
             {tab === "about" && (
               <>
                 <div className="section-heading">

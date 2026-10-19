@@ -1,0 +1,226 @@
+/* 坚果云同步面板（设置 → 同步）。
+   Everything here is scoped to `.nutstore-*`; the shared blocks it leans on
+   (.section-heading, .settings-note, .backup-card, .setting-row, .button-pair,
+   .primary-button, .text-glass-button, .import-confirm, .inline-feedback,
+   .spinning) stay untouched in src/styles.css. Kit variables only — no literal
+   theme colours, so light and dark follow the glass material automatically. */
+
+.nutstore-sync {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- 未连接：连接表单 ---------- */
+
+.nutstore-form {
+  display: block;
+  margin-top: 4px;
+}
+
+.nutstore-form > .ngs-motion > .ngs-content {
+  padding: 20px 22px;
+}
+
+.nutstore-connect-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.nutstore-connect-form > label {
+  margin: 15px 0 9px;
+  color: var(--ngs-text);
+  font-size: 12px;
+}
+
+.nutstore-connect-form > label:first-of-type {
+  margin-top: 0;
+}
+
+.nutstore-connect-form > .ngs-input {
+  display: block;
+  width: 100%;
+}
+
+.nutstore-connect-form .ngs-input-field {
+  font-size: 13px;
+}
+
+.nutstore-help {
+  margin: 7px 0 0;
+  color: var(--ngs-text-dim);
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+/* The kit resets buttons inside the input affix, so this needs one class more
+   than `.ngs-input-affix button` to win. */
+.nutstore-connect-form .nutstore-password-toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -2px -4px -2px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ngs-text-dim);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.nutstore-connect-form .nutstore-password-toggle:hover {
+  color: var(--ngs-text);
+  background: var(--ngs-tint-hover);
+}
+
+.nutstore-connect-form .nutstore-password-toggle:focus-visible {
+  outline: 2px solid var(--ngs-focus-ring);
+  outline-offset: 2px;
+}
+
+.nutstore-connect-form .nutstore-password-toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.nutstore-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.nutstore-preview code {
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.nutstore-manual p {
+  margin: 0;
+}
+
+.nutstore-manual p + p {
+  margin-top: 7px;
+}
+
+.nutstore-manual a {
+  color: var(--ngs-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 坚果云官方的红色安全提示。 */
+.nutstore-manual .nutstore-security {
+  color: var(--ngs-tone-danger);
+  font-weight: 500;
+}
+
+/* ---------- 已连接：账号卡与操作 ---------- */
+
+.nutstore-account {
+  display: block;
+  margin-top: 4px;
+}
+
+.nutstore-account-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.nutstore-account-text p {
+  overflow-wrap: anywhere;
+}
+
+.nutstore-account-text p + p {
+  margin-top: 2px;
+}
+
+.nutstore-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 4px;
+}
+
+.nutstore-actions .nutstore-disconnect {
+  margin-left: auto;
+}
+
+.nutstore-sync .nutstore-pending {
+  border-color: color-mix(in srgb, var(--ngs-tone-warning) 55%, transparent);
+}
+
+.nutstore-info {
+  margin-top: 6px;
+}
+
+.nutstore-info .setting-row {
+  padding: 16px 0;
+}
+
+.nutstore-info .setting-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.nutstore-info .nutstore-last-sync p {
+  font-variant-numeric: tabular-nums;
+}
+
+.nutstore-info .ngs-spinner {
+  flex: none;
+}
+
+/* ---------- 窄屏：按钮组换行 ---------- */
+
+@media (max-width: 560px) {
+  .nutstore-form > .ngs-motion > .ngs-content {
+    padding: 18px;
+  }
+
+  .nutstore-form-actions .ngs-btn {
+    width: 100%;
+  }
+
+  .nutstore-actions {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .nutstore-actions .ngs-btn {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .nutstore-actions .nutstore-disconnect {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .nutstore-account > .ngs-motion > .ngs-content {
+    flex-wrap: wrap;
+  }
+
+  .nutstore-account > .ngs-motion > .ngs-content > .ngs-btn {
+    flex: 1 0 100%;
+  }
+
+  .nutstore-pending .button-pair,
+  .nutstore-confirm .button-pair {
+    flex-wrap: wrap;
+  }
+
+  .nutstore-pending .button-pair .ngs-btn,
+  .nutstore-confirm .button-pair .ngs-btn {
+    flex: 1 1 100%;
+  }
+}

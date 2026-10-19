@@ -961,7 +961,7 @@ button:disabled {
   display: grid;
   height: 100%;
   align-items: stretch;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .settings-tabs .ngs-segment {
   min-width: 0;
@@ -1734,6 +1734,16 @@ button:disabled {
     gap: 10px;
     margin: 0 16px 16px;
     padding: 12px 0 0;
+  }
+  /* Four tabs: tighten the rhythm so labels and icons stay on one row. */
+  .settings-tabs .ngs-segment {
+    gap: 4px;
+    padding-inline: 4px;
+    font-size: 11px;
+  }
+  .settings-tabs .ngs-segment-icon svg {
+    width: 1em;
+    height: 1em;
   }
   /* Two rows instead of one: only the slot sizes need to come down. */
   .wallpaper-picker .ngs-segmented-inner {

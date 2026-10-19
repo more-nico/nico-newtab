@@ -46,7 +46,7 @@ Nico 把每一个新标签页变成一小片风景。以莫奈与卡耶博特的
 功能一览：
 · 三幅内置画作可离线显示，也可上传自己的 JPG / PNG / WebP 壁纸，在本地压缩为 WebP，并调整铺满方式、位置、亮度、模糊与玻璃参数。
 · 时钟支持 12 / 24 小时制，日期与问候语随本地语言显示；玻璃明暗可自动跟随壁纸，也可手动固定浅色或深色。
-· 搜索支持浏览器默认引擎、Google、Bing、百度、DuckDuckGo 和自定义引擎；搜索结果在新标签页打开，不替换当前页；内置引擎支持联想词。
+· 搜索支持浏览器默认引擎、Google、Bing、百度等内置引擎和自定义引擎；搜索结果在新标签页打开，不替换当前页；内置引擎支持联想词。
 · 常用网站可添加、编辑、拖拽排序、上传自定义图标；也可以从工具栏图标把当前网页一键加入。
 · 设置页可导出 / 导入完整 JSON 备份（含自定义壁纸），换设备也能带走自己的布局。
 · 可选的坚果云同步：使用你自己的坚果云账号与第三方应用密码，把设置和常用网站同步到你自己的网盘；默认关闭，凭据只保存在本机，不写入备份。
@@ -62,7 +62,7 @@ Nico turns every new tab into a small landscape. Public-domain paintings by Mone
 What you get:
 · Three built-in paintings that work offline, plus your own JPG / PNG / WebP wallpaper, compressed to WebP on your device with controls for fit, position, brightness, blur and glass optics.
 · A 12/24-hour clock with a localized date and greeting; glass tone follows the wallpaper automatically or stays light/dark if you prefer.
-· Search with the browser default engine, Google, Bing, Baidu, DuckDuckGo or your own custom engine. Results open in a new tab so the new tab page stays put, and built-in engines offer suggestions.
+· Search with the browser default engine, Google, Bing, Baidu or your own custom engine. Results open in a new tab so the new tab page stays put, and built-in engines offer suggestions.
 · Shortcuts you can add, edit, reorder and give custom icons to — or add the current page from the toolbar with one click.
 · Full JSON backup export and import, including your custom wallpaper, so your setup travels with you.
 · Optional Nutstore sync: connect your own Nutstore account with an app-specific password to keep your settings and shortcuts in your own cloud. Off by default; credentials stay on your device and are never written into backups.
@@ -78,7 +78,7 @@ Nico は、新しいタブを小さな風景に変えます。モネとカイユ
 主な機能：
 · オフラインでも表示できる内蔵の絵画 3 点。JPG / PNG / WebP の壁紙も追加でき、端末内で WebP に圧縮したうえで、表示方法、位置、明るさ、ぼかし、ガラスの質感を調整できます。
 · 12 / 24 時間表示の時計。日付とあいさつは表示言語に合わせて切り替わり、ガラスの明暗は壁紙に自動で追従するほか、ライト / ダークに固定できます。
-· ブラウザ既定の検索エンジン、Google、Bing、Baidu、DuckDuckGo、独自の検索エンジンに対応。検索結果は新しいタブで開くため、新しいタブページはそのまま残ります。内蔵エンジンはサジェストにも対応します。
+· ブラウザ既定の検索エンジン、Google、Bing、Baidu、独自の検索エンジンに対応。検索結果は新しいタブで開くため、新しいタブページはそのまま残ります。内蔵エンジンはサジェストにも対応します。
 · よく使うサイトの追加・編集・並べ替え・アイコン設定に加え、ツールバーのアイコンから現在のページをワンクリックで追加できます。
 · カスタム壁紙を含む JSON バックアップのエクスポート / インポートで、環境をそのまま持ち運べます。
 · 任意の Nutstore 同期：ご自身の Nutstore アカウントとアプリパスワードで、設定とよく使うサイトをご自身のクラウドに保存できます。初期状態はオフで、認証情報は端末内にのみ保存され、バックアップには含まれません。
@@ -175,13 +175,13 @@ Permissions: storage (local settings), search (default-engine search), favicon (
 | 隐私政策             | URL 必须可访问                  | ✅ 三语文件已加入仓库；**提交前需 push 到 GitHub 使 URL 生效**                      |
 | 搜索词               | ≤ 7 个                          | 见 1.4                                                                              |
 
-### 4.1 已生成的截图（1280×800，JPEG）
+### 4.1 已生成的截图（1280×800，PNG）
 
 | 语言  | 新标签页                                        | 外观设置                                           | 同步设置                                     |
 | ----- | ----------------------------------------------- | -------------------------------------------------- | -------------------------------------------- |
-| zh-CN | `assets/store/screenshots/zh-CN/01-new-tab.jpg` | `assets/store/screenshots/zh-CN/02-appearance.jpg` | `assets/store/screenshots/zh-CN/03-sync.jpg` |
-| en-US | `assets/store/screenshots/en-US/01-new-tab.jpg` | `assets/store/screenshots/en-US/02-appearance.jpg` | `assets/store/screenshots/en-US/03-sync.jpg` |
-| ja    | `assets/store/screenshots/ja/01-new-tab.jpg`    | `assets/store/screenshots/ja/02-appearance.jpg`    | `assets/store/screenshots/ja/03-sync.jpg`    |
+| zh-CN | `assets/store/screenshots/zh-CN/01-new-tab.png` | `assets/store/screenshots/zh-CN/02-appearance.jpg` | `assets/store/screenshots/zh-CN/03-sync.jpg` |
+| en-US | `assets/store/screenshots/en-US/01-new-tab.png` | `assets/store/screenshots/en-US/02-appearance.jpg` | `assets/store/screenshots/en-US/03-sync.jpg` |
+| ja    | `assets/store/screenshots/ja/01-new-tab.png`    | `assets/store/screenshots/ja/02-appearance.jpg`    | `assets/store/screenshots/ja/03-sync.jpg`    |
 
 重新生成：`npm run build && node scripts/capture-store-screenshots.mjs`（脚本会注入一组演示用常用网站，不接触真实用户数据）。
 

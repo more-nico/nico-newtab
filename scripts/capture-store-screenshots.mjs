@@ -53,9 +53,12 @@ const SHORTCUTS = [
 
 async function capture(page, name) {
   const png = await page.screenshot();
-  const file = resolve(BASE, `${name}.jpg`);
+  const file = resolve(BASE, `${name}.png`);
+  // Partner Center only accepts .png for screenshots. The wallpaper makes a
+  // full-colour PNG large, so quantise to 256 colours — visually identical at
+  // 1280×800 and a fraction of the bytes.
   await sharp(png)
-    .jpeg({ quality: 90, chromaSubsampling: "4:4:4" })
+    .png({ palette: true, colours: 256, effort: 10, dither: 1 })
     .toFile(file);
   console.log(`wrote ${file}`);
 }

@@ -47,6 +47,7 @@ Nico 是一个 Chrome / Edge 新标签页扩展：用时间、搜索和常用网
 - **本地壁纸与备份。** 三幅内置画作可离线显示；上传图片会在本地压缩为 WebP；设置页可导出和导入完整 JSON 备份。
 - **可选的坚果云同步。** 用坚果云账号和第三方应用密码（WebDAV）把常用网站与全部设置同步到自己的坚果云；支持手动上传、从云端恢复和自动同步，凭据只留在本机、不写进备份。
 - **快捷网站可整理。** 支持拖拽排序、编辑、删除、网站图标、右键编辑，以及从浏览器工具栏直接添加当前网站。
+- **桌面分页与文件夹。** 页面可命名并设置 emoji 或图片图标；底部 dock 悬停展开，文件夹占用 2×2 网格，支持内部排序和跨页面移动。
 
 ## 安装
 
@@ -68,7 +69,9 @@ Nico 是一个 Chrome / Edge 新标签页扩展：用时间、搜索和常用网
 
 ### 快捷网站
 
-点击“添加网站”填写名称和 HTTP/HTTPS 地址。点击网站会在新标签页打开；“整理”、图标上的省略号或右键可以编辑、删除和调整顺序。可上传 JPG、PNG 或 WebP 图标，图片会在本地裁成方形并压缩到 128 像素。
+点击“添加网站”填写名称和 HTTP/HTTPS 地址。点击网站会在新标签页打开；“整理”、悬停一秒出现的铅笔或右键可以编辑、删除和调整顺序。可上传 JPG、PNG 或 WebP 图标，图片会在本地裁成方形并压缩到 128 像素。
+
+底部 dock 切换页面，右键页面图标可修改名称和 emoji / 图片图标。拖到其他页面的 dock 图标可跨页移动网站或整个文件夹。拖到网站中心建立文件夹，靠近边缘则预览排序；文件夹内部沿用桌面的拖动排序，拖到外部可移出网站。“解除文件夹”会将网站按原顺序放回页面。
 
 工具栏上的 Nico 图标可以把当前标签页的标题、网址和图标带入添加面板。扩展页、`chrome://` 页面和本地文件没有可访问的网址，因此不会被添加。
 
@@ -156,7 +159,6 @@ npm run record:demos # Playwright 录制文档 GIF
 npm run mock:webdav  # 本地模拟坚果云 WebDAV，供网页预览联调同步
 npm run render:logo   # 从 assets/logo/*.svg 重新生成全部图标 PNG
 node scripts/capture-store-screenshots.mjs  # 生成三语商店截图（需先 build）
-npm run test:i18n    # 构建后用 Chromium 校验 zh-CN / en / ja 三种界面
 npm run test:full    # 提交或打包前的完整检查
 npm run package      # 构建并生成 release/nico-newtab-1.0.0.zip
 ```
@@ -169,9 +171,11 @@ npm run package      # 构建并生成 release/nico-newtab-1.0.0.zip
 
 ## 测试策略
 
-日常修改、普通 bug 修复和小功能使用 `npm run test:quick`。UI-only 调整使用最小的专项验证，可以运行 `scripts/inspect-ui.mjs`、`scripts/preview-smoke.mjs` 或一次性 Playwright 脚本。
+日常修改、普通 bug 修复和小功能使用 `npm run test:quick`。单元测试保留数据校验、备份与同步、写入失败回滚、搜索输入和桌面拖动等关键行为；语言字典与扩展本地化资源也在这里检查。UI-only 调整使用最小的专项验证，可以运行 `scripts/preview-smoke.mjs` 或一次性 Playwright 脚本。
 
-`scripts/smoke.mjs` 只保留跨浏览器、跨扩展边界且值得长期回归的流程：MV3 加载、CSP、存储同步、输入行为和浏览器重启持久化。一次性的视口矩阵、截图检查和布局探索不放进这里。
+`scripts/smoke.mjs` 只保留跨扩展边界且值得长期回归的流程：MV3 加载与 CSP、网站编辑和跨标签同步、壁纸备份恢复、输入法与搜索、文件夹拖动、浏览器重启持久化及工具栏添加。一次性的视口矩阵、截图检查和布局探索不放进这里。
+
+桌面相关只保留布局、拖动意图、排序和数据校验的单元测试；文件夹的原生拖动与持久化由 smoke 调用 `scripts/desktop-drag.mjs` 统一检查。专项验收完成后不保留独立截图脚本、假 DOM 实现或 CSS 源码正则断言。
 
 提交或打包前运行：
 
@@ -179,7 +183,7 @@ npm run package      # 构建并生成 release/nico-newtab-1.0.0.zip
 npm run test:full
 ```
 
-它会先构建扩展，再在独立的 Chrome / Edge 配置中运行完整烟测。详细约定见被仓库使用的 `AGENTS.md`。
+它会先构建扩展，再在独立的 Chrome / Edge 配置中运行完整烟测。也可以设置 `BROWSER_EXECUTABLE`，指定本机 Chromium 系浏览器的可执行文件。
 
 ## 数据、权限与限制
 

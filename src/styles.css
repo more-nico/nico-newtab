@@ -419,6 +419,12 @@ button:disabled {
 .shortcut-glass > .ngs-motion {
   box-shadow: 0 5px 20px #21383216;
 }
+.folder-glass > .ngs-motion {
+  box-shadow: 0 6px 24px #2138321c;
+}
+.dock-surface > .ngs-motion {
+  box-shadow: 0 8px 28px #1020241f;
+}
 .settings-button > .ngs-motion {
   box-shadow: 0 6px 24px #192b2310;
 }
@@ -492,39 +498,91 @@ button:disabled {
   color: var(--ink-warn);
   text-shadow: 0 1px 10px #1b2d30aa;
 }
+/* The tile metrics of the desktop. Two containers read them: the shortcut
+   section on the page and the sheet that opens a folder. They are named side
+   by side here so that every density keeps a single copy of the numbers —
+   the default here, the compact and the phone sizes in their own media
+   queries further down. */
+.nico-dialog:has(.folder-dialog),
+.shortcuts-section {
+  --desktop-cell: 80px;
+  --desktop-row: 88px;
+  --desktop-gap: 14px;
+  /* The two glass tiles. The site radius follows its own size ratio; the
+     folder uses the balanced square-root size scaling (see
+     src/lib/tileRadius.ts), so it grows without matching the folder box 1:1.
+     The radius itself is applied through the kit's cornerRadius prop, which
+     is also what the refraction map is built from. */
+  --shortcut-glass-size: 62px;
+  --folder-glass-size: 150px;
+}
 .shortcuts-section {
   /* Seven compact slots (six saved sites plus Add) stay on one desktop row.
-     The search field remains narrower, preserving a clear visual hierarchy. */
+     The search field remains narrower, preserving a clear visual hierarchy.
+     A folder spans two tracks (and two rows), so the grid is explicit rather
+     than a wrap-flex row; App chooses the final track count from the measured
+     width. */
   width: min(700px, 100%);
-  margin-top: clamp(18px, 3.8dvh, 35px);
+  margin-top: clamp(26px, 4.6dvh, 43px);
   margin-bottom: clamp(16px, 3dvh, 32px);
 }
-.shortcut-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px 16px;
-  color: var(--ink-soft);
-  font-size: 10px;
-  letter-spacing: 1.6px;
-}
-.toolbar-button .ngs-btn-inner {
-  font-size: 10px;
-  color: inherit;
-  gap: 4px;
-  padding: 5px 9px !important;
-}
 .shortcut-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(7, var(--desktop-cell));
+  grid-auto-rows: var(--desktop-row);
+  align-items: start;
   justify-content: center;
-  gap: 20px 14px;
-  flex-wrap: wrap;
+  gap: var(--desktop-gap);
+  position: relative;
+  border-radius: 18px;
+  transition: outline-color 0.2s ease;
 }
-.shortcut-item {
-  width: 80px;
+.shortcut-grid.is-drop-target {
+  outline: 1px dashed #ffffff73;
+  outline-offset: 9px;
+}
+/* While a page drag is running, the tiles move under the pointer. If they stayed
+   hit-testable, the browser's drop target would change as they animate and a
+   mouseup before the next dragover would cancel the drop altogether. The grid
+   is the single stable target; hit testing reads the resting rectangles. The
+   source itself stays hit-testable: disabling its hit area stalls Chromium's
+   native drag. A folder that is being dragged is a source too, so it keeps
+   its hit area while every other folder gives it up. */
+.shortcut-grid.is-page-dragging .shortcut-item:not(.is-drag-source),
+.shortcut-grid.is-page-dragging .shortcut-item:not(.is-drag-source) *,
+.shortcut-grid.is-page-dragging .folder-item:not(.is-drag-source),
+.shortcut-grid.is-page-dragging .folder-item:not(.is-drag-source) * {
+  pointer-events: none;
+}
+/* A desktop site, a desktop folder and a site inside an opened folder are
+   all the same kind of tile: one cell holding a glass square and a name.
+   They share the cell box, the corner and the drag motion, and each
+   container only supplies its own drag variables. */
+.shortcut-item,
+.folder-item,
+.folder-site {
   position: relative;
   border-radius: 24px;
-  transition: transform 0.2s;
+  /* The live reorder preview sets --drag-x/--drag-y on each tile; the CSS
+     transition is what makes the held pointer move its neighbours instead of
+     teleporting them. 200ms is short enough to feel direct, long enough to
+     read as a slide. The opened folder writes --folder-drag-x/--folder-drag-y
+     instead, so both names are read here: a tile follows whichever pair its
+     container set, and a later unification of the two interfaces needs no
+     change in this file. */
+  transform: translate3d(
+    var(--drag-x, var(--folder-drag-x, 0px)),
+    var(--drag-y, var(--folder-drag-y, 0px)),
+    0
+  );
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* A site fills one cell of the grid; a folder spans two of them and takes
+   its size from the grid instead. */
+.shortcut-item,
+.folder-site {
+  width: var(--desktop-cell);
+  height: var(--desktop-row);
 }
 .shortcut-link {
   width: 100%;
@@ -538,9 +596,39 @@ button:disabled {
   border-radius: 20px;
 }
 .shortcut-glass {
-  width: 62px;
-  height: 62px;
-  transition: transform 0.2s;
+  width: var(--shortcut-glass-size);
+  height: var(--shortcut-glass-size);
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    outline-color 0.18s ease,
+    outline-offset 0.18s ease;
+}
+/* Drag proximity is painted on the glass itself, following the pointer across
+   nearby tiles. It is otherwise invisible and never changes hit testing. */
+.shortcut-glass::after,
+.folder-glass::after {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  inset: -12px;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle 54px at calc(var(--drag-glow-x, 0px) + 12px)
+      calc(var(--drag-glow-y, 0px) + 12px),
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0.16) 45%,
+    transparent 78%
+  );
+  filter: blur(7px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+.shortcut-glass.is-drag-lit::after,
+.folder-glass.is-drag-lit::after {
+  opacity: var(--drag-glow-strength, 0);
 }
 .shortcut-glass > .ngs-motion > .ngs-content {
   display: flex;
@@ -602,17 +690,342 @@ button:disabled {
   opacity: 0;
   transition: opacity 0.15s;
 }
-.shortcut-item:hover .shortcut-edit,
-.shortcut-item:focus-within .shortcut-edit {
+/* The badge waits for the pointer to rest on the tile (a second, set in
+   src/lib/useRestingBadge.ts): a quick pass over a site must not flash an
+   edit button. The keyboard path stays immediate, so the badge is still
+   reachable with Tab. The desktop tile, the folder tile and the tiles of an
+   opened folder all follow the same rule. */
+.shortcut-item.is-badge-visible .shortcut-edit,
+.shortcut-item:focus-within .shortcut-edit,
+.folder-item.is-badge-visible .shortcut-edit,
+.folder-item:focus-within .shortcut-edit,
+.folder-site.is-badge-visible .shortcut-edit,
+.folder-site:focus-within .shortcut-edit {
   opacity: 1;
 }
-.is-managing .shortcut-glass {
+.shortcut-move {
+  right: 30px;
+}
+/* Managing is the explicit path, so both actions stay visible there. The move
+   control takes the corner and brightens to read against any wallpaper. */
+.is-managing .shortcut-move {
+  right: 0;
+  top: -7px;
+  width: 30px !important;
+  height: 30px !important;
+  opacity: 1;
+  color: #fff;
+}
+/* A display:contents wrapper carries the preview translation variables to the
+   folder tile without becoming a grid item of its own. */
+.folder-drag-slot {
+  display: contents;
+}
+/* A folder is the same kind of tile as a site, but its artwork occupies a 2×2
+   block of the grid. The glass is larger and its corner grows by the balanced
+   square-root rule, so the two still read as one family. */
+.folder-item {
+  grid-column: span 2;
+  grid-row: span 2;
+  min-width: 0;
+}
+.folder-tile {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  border-radius: 20px;
+}
+/* One transparent control owns the folder's open action for assistive
+   technology. It is a sibling of the glass/preview, not their ancestor, so no
+   anchor is ever nested in a button. Pointer clicks on the glass, an empty
+   cell or the name bubble to the tile's open handler; only the mini site links
+   handle their own navigation. */
+.folder-open {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.folder-open:focus-visible {
+  outline-offset: 6px;
+}
+.folder-glass {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: var(--folder-glass-size);
+  /* Match the bottom edge of the shortcut glass in the second grid row. */
+  height: calc(var(--desktop-row) + var(--desktop-gap) + var(--shortcut-glass-size));
+  margin: 0 auto;
+  transition: transform 0.2s;
+}
+.folder-glass > .ngs-motion > .ngs-content {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.folder-tile:hover .folder-glass {
+  transform: translateY(-3px);
+}
+.app[data-quality="high"] .folder-tile:hover .folder-glass {
+  transform: none;
+}
+/* Native drag still updates :hover as it crosses tiles. Keep the usual hover
+   lift out of a drag; only the intentional merge scale should move glass. */
+.shortcut-grid.is-page-dragging .shortcut-link:hover .shortcut-glass,
+.shortcut-grid.is-page-dragging .folder-tile:hover .folder-glass {
+  transform: none;
+}
+.folder-name {
+  position: relative;
+  z-index: 2;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  max-width: 100%;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 8px #1a302877;
+  /* The open button underneath already carries the name. */
+  pointer-events: none;
+}
+.folder-preview {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  align-items: stretch;
+  justify-items: stretch;
+  transform-origin: center;
+}
+.folder-preview.is-2 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px;
+  padding: 9px;
+  animation: folder-grid-2-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.folder-preview.is-3 {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 3px;
+  padding: 8px;
+  animation: folder-grid-3-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.folder-preview.is-3.is-stacked {
+  animation-name: folder-grid-stack-in;
+}
+/* The 2×2 layout keeps nine slots mounted so member changes never rebuild the
+   preview; the five extra cells simply leave the grid. */
+.folder-preview.is-2 .folder-mini:nth-child(n + 5) {
+  display: none;
+}
+.folder-mini {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 21px;
+  transition: background-color 0.2s ease;
+}
+.folder-mini.is-empty {
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+.folder-preview.is-3 .folder-mini.is-empty {
+  border-radius: 14px;
+}
+/* At the outer corners, an empty slot follows the glass shell's curve after
+   the preview's inset. Interior corners keep the smaller slot radius. */
+.folder-preview.is-2 .folder-mini:nth-child(1).is-empty {
+  border-top-left-radius: max(21px, calc(var(--folder-preview-radius) - 9px));
+}
+.folder-preview.is-2 .folder-mini:nth-child(2).is-empty {
+  border-top-right-radius: max(21px, calc(var(--folder-preview-radius) - 9px));
+}
+.folder-preview.is-2 .folder-mini:nth-child(3).is-empty {
+  border-bottom-left-radius: max(21px, calc(var(--folder-preview-radius) - 9px));
+}
+.folder-preview.is-2 .folder-mini:nth-child(4).is-empty {
+  border-bottom-right-radius: max(21px, calc(var(--folder-preview-radius) - 9px));
+}
+.folder-preview.is-3 .folder-mini:nth-child(1).is-empty {
+  border-top-left-radius: max(14px, calc(var(--folder-preview-radius) - 8px));
+}
+.folder-preview.is-3 .folder-mini:nth-child(3).is-empty {
+  border-top-right-radius: max(14px, calc(var(--folder-preview-radius) - 8px));
+}
+.folder-preview.is-3 .folder-mini:nth-child(7).is-empty {
+  border-bottom-left-radius: max(14px, calc(var(--folder-preview-radius) - 8px));
+}
+.folder-preview.is-3 .folder-mini:nth-child(9).is-empty {
+  border-bottom-right-radius: max(14px, calc(var(--folder-preview-radius) - 8px));
+}
+.folder-mini-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+/* A visible mini icon is a real link, so it gets its own keyboard ring and is
+   the one preview child whose click navigates instead of opening the folder. */
+.folder-mini-link {
+  pointer-events: auto;
+  color: inherit;
+  text-decoration: none;
+  border-radius: inherit;
+  cursor: pointer;
+}
+.folder-mini-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+.folder-mini-icon.is-entering {
+  animation: folder-mini-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.folder-mini-icon.is-leaving {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  animation: folder-mini-out 0.18s ease forwards;
+  pointer-events: none;
+}
+.folder-preview.is-2 .folder-mini .site-icon {
+  width: 27px;
+  height: 27px;
+}
+.folder-preview.is-3 .folder-mini .site-icon {
+  width: 19px;
+  height: 19px;
+}
+.folder-preview.is-2 .folder-mini .site-letter {
+  font-size: 20px;
+}
+.folder-preview.is-3 .folder-mini .site-letter {
+  font-size: 15px;
+}
+.folder-mini .site-icon {
+  max-width: 100%;
+  max-height: 100%;
+  filter: drop-shadow(0 1px 3px rgba(12, 24, 28, 0.28));
+}
+.folder-mini-stack {
+  position: relative;
+  isolation: isolate;
+}
+.folder-stack-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 6px;
+  background: color-mix(in srgb, currentColor 22%, transparent);
+  box-shadow: 0 1px 4px rgba(12, 24, 28, 0.24);
+  transform: translate(
+    calc(-50% + var(--stack) * 2px),
+    calc(-50% - var(--stack) * 2px)
+  );
+  transform-origin: center;
+  transition:
+    opacity 0.16s ease,
+    scale 0.18s ease,
+    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: folder-layer-in 0.22s ease;
+}
+.folder-stack-layer .site-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+.folder-stack-layer:nth-child(1) {
+  z-index: 1;
+  opacity: 0.72;
+}
+.folder-stack-layer:nth-child(2) {
+  z-index: 2;
+  opacity: 0.86;
+}
+.folder-stack-layer:nth-child(3) {
+  z-index: 3;
+}
+.folder-stack-layer.is-leaving {
+  opacity: 0 !important;
+  scale: 0.8;
+}
+@keyframes folder-grid-2-in {
+  from {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+}
+@keyframes folder-grid-3-in {
+  from {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+}
+@keyframes folder-grid-stack-in {
+  from {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+}
+@keyframes folder-mini-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes folder-mini-out {
+  to {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes folder-layer-in {
+  from {
+    opacity: 0;
+  }
+}
+.folder-edit {
+  right: 2px;
+  top: -5px;
+  /* The open control and glass create stacking levels inside the tile; the
+     badge must stay above both, as it did before the tile was restructured. */
+  z-index: 3;
+}
+.is-managing .folder-glass {
   outline: 1px dashed #fff9;
   outline-offset: 4px;
 }
-.drag-over {
-  transform: translateY(-6px);
-  outline: 2px dashed #fff8;
+/* A merge enlarges only the target glass. Keeping the item's grid box steady
+   lets it return smoothly when the dragged icon moves away — the tile already
+   follows its drag variables through the shared .shortcut-item rule, so only
+   the glass needs a rule of its own here. */
+.app .shortcut-item.folder-drop-target .shortcut-link .shortcut-glass {
+  transform: scale(1.23);
+}
+.shortcut-item.folder-drop-target .shortcut-name {
+  color: #fff;
+}
+.is-managing .shortcut-glass {
+  outline: 1px dashed #fff9;
   outline-offset: 4px;
 }
 /* The tile being moved stays put but steps back, so the pointer's ghost and the
@@ -620,24 +1033,190 @@ button:disabled {
 .is-dragging {
   opacity: 0.35;
 }
+/* The source node stays in its resting cell (moving the drag source under the
+   pointer suppresses Chromium's drop), so make it invisible and let the
+   separate placeholder below show the slot instead. */
+.shortcut-item.is-drag-source,
+.folder-item.is-drag-source {
+  opacity: 0;
+}
+.shortcut-item.is-drag-source .shortcut-link,
+.shortcut-item.is-drag-source .shortcut-edit {
+  pointer-events: none;
+}
+/* One non-draggable element, absolutely positioned in the grid, follows the
+   previewed insertion cell. It is deliberately outside the grid's auto-flow so
+   it cannot change the layout it is previewing. A folder's placeholder covers
+   the whole 2×2 block it would land on. The corner is set inline: the
+   placeholder stands in for the glass it replaces, so it carries that
+   glass's balanced folder radius rather than a number of its own. */
+.drag-placeholder {
+  position: absolute;
+  z-index: 1;
+  border: 1.5px dashed rgba(255, 255, 255, 0.72);
+  border-radius: 21px;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  pointer-events: none;
+  transition:
+    left 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    top 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.drag-placeholder[data-drag-span="2"] {
+  background: rgba(255, 255, 255, 0.16);
+}
 /* What the pointer carries. Chrome cannot rasterise the tile's backdrop-filter
    into a drag image, so the browser default is a black box with a duplicated
    label; this is a flat stand-in painted on top of the wallpaper instead. The
-   radius is only a fallback — buildDragGhost mirrors the live tile's own. */
+   radius here is only a fallback — buildDragGhost mirrors the live tile's own,
+   so a folder's ghost carries the folder glass's balanced radius. */
 .drag-ghost {
   position: fixed;
   z-index: 900;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 21px;
+  border-radius: var(--drag-ghost-radius, 21px);
   background: rgba(255, 255, 255, 0.38);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
-    0 10px 24px rgba(18, 30, 36, 0.34);
+  overflow: hidden;
+  clip-path: inset(0 round var(--drag-ghost-radius, 21px));
   color: #16202a;
   pointer-events: none;
+}
+.page-dock {
+  width: 100%;
+  flex: none;
+  display: flex;
+  justify-content: center;
+  padding: clamp(4px, 1dvh, 10px) 0 0;
+  position: relative;
+  z-index: 2;
+}
+.dock-surface {
+  min-width: 0;
+  max-width: 100%;
+}
+.dock-surface > .ngs-motion > .ngs-content {
+  padding: 6px;
+}
+.dock-inner {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  max-width: min(760px, calc(100vw - 96px));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dock-inner::-webkit-scrollbar {
+  display: none;
+}
+/* The page's icon is the resting state; the label unfolds to its right on
+   hover or keyboard focus. Width, opacity and the small slide share one
+   duration family so the dock breathes rather than snaps. */
+.dock-page {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 4px;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  transition: background 0.2s ease;
+}
+.dock-page:hover {
+  background: color-mix(in srgb, currentColor 9%, transparent);
+}
+.dock-page:focus-visible {
+  outline-offset: 2px;
+}
+.dock-page-icon {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+/* A page's own icon: an emoji or a picture. The name stays available as
+   text, so the icon only has to be an abbreviation. */
+.page-icon-emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+.page-icon-image {
+  width: 19px;
+  height: 19px;
+  object-fit: contain;
+  border-radius: 5px;
+}
+.dock-page:hover .dock-page-icon {
+  transform: translateY(-1px);
+}
+.dock-page.is-active .dock-page-icon {
+  background: color-mix(in srgb, currentColor 20%, transparent);
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+.dock-page-label {
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateX(-3px);
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  transition:
+    max-width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    margin 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s ease,
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.dock-page:hover .dock-page-label,
+.dock-page:focus-visible .dock-page-label {
+  max-width: 160px;
+  margin-left: 8px;
+  margin-right: 5px;
+  opacity: 1;
+  transform: none;
+}
+/* While a site is in flight, every other page icon becomes an obvious drop
+   target; the page under the pointer gets the stronger ring. */
+.page-dock.is-dragging-site .dock-page:not(.is-active) .dock-page-icon {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 34%, transparent);
+}
+.dock-page.is-drop-over {
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+.dock-page.is-drop-over .dock-page-icon {
+  background: color-mix(in srgb, currentColor 26%, transparent);
+  box-shadow: inset 0 0 0 2px currentColor;
+  transform: translateY(-1px) scale(1.04);
+}
+.dock-page.is-drop-over .dock-page-label {
+  max-width: 160px;
+  margin-left: 8px;
+  margin-right: 5px;
+  opacity: 1;
+  transform: none;
+}
+.dock-divider {
+  flex: none;
+  width: 1px;
+  height: 22px;
+  margin: 0 3px;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.dock-new .dock-page-icon {
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, currentColor 38%, transparent);
 }
 .page-footer {
   width: 100%;
@@ -706,6 +1285,30 @@ button:disabled {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+}
+/* The desktop's actions live in the bottom-right corner, immediately left of
+   Settings: the page's own controls (only while organizing), then the folder
+   and the organize toggle. */
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  color: var(--ink-soft);
+}
+.footer-action .ngs-btn-inner {
+  font-size: 10px;
+  color: inherit;
+  gap: 4px;
+  padding: 5px 9px !important;
+}
+.footer-folder .ngs-btn-inner {
+  white-space: nowrap;
+}
+.footer-icon {
+  width: 28px !important;
+  height: 28px !important;
+  color: inherit;
 }
 .settings-button {
   --ngs-glass-tint-strength: 0.1 !important;
@@ -1419,6 +2022,152 @@ button:disabled {
   color: var(--ngs-text-dim);
   font-size: 11px;
 }
+/* A folder needs a little more room than the name/confirm sheets, but keeps
+   the auto height of an ordinary dialog. The tile metrics are not repeated
+   here: the sheet reads the same --desktop-cell/--desktop-row/--desktop-gap
+   as the desktop grid. */
+.nico-dialog:has(.folder-dialog) {
+  width: min(540px, 100%);
+}
+.nico-dialog:has(.folder-dialog) .dialog-actions {
+  border-top: 0;
+}
+.folder-head-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.folder-head-text small {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: var(--ngs-text-dim);
+}
+.folder-head .dialog-title {
+  line-height: 1.25;
+}
+.folder-rename {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ngs-text-dim);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+.folder-rename:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  color: var(--ngs-text);
+}
+.folder-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.folder-site-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--desktop-cell));
+  /* The sheet keeps the same rhythm as the desktop grid. */
+  gap: var(--desktop-gap);
+}
+.folder-drag-placeholder {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  transition: left 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    top 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* The cell box, the corner and the drag motion are shared with the desktop
+   tile (see .shortcut-item). Only the entrance and the fade belong to the
+   sheet: a dragged tile fades out while it slides to its new cell. */
+.folder-site {
+  color: var(--ink);
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.15s ease;
+  animation: folder-site-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--folder-index, 0) * 18ms);
+}
+@keyframes folder-site-in {
+  from {
+    opacity: 0;
+  }
+}
+.folder-site.is-dragging {
+  opacity: 0;
+}
+.folder-dialog.is-reordering .folder-site:not(.is-dragging),
+.folder-dialog.is-reordering .folder-site:not(.is-dragging) * {
+  pointer-events: none;
+}
+.folder-dialog.is-reordering .folder-site-link:hover .shortcut-glass {
+  transform: none;
+}
+.folder-site-link:focus-visible {
+  /* The sheet is a narrow container, so its ring sits closer to the glass. */
+  outline-offset: 3px;
+}
+.folder-empty {
+  padding: 16px 0 4px;
+  text-align: center;
+  color: var(--ngs-text-dim);
+  font-size: 11px;
+  letter-spacing: 0.4px;
+}
+/* Explicit destination picker: one full-width row per page. */
+.move-page-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.move-page-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 11px;
+  border-radius: 14px;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  color: var(--ngs-text);
+  text-align: left;
+  transition: background 0.18s ease;
+}
+.move-page-item:hover:not(:disabled) {
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
+.move-page-item:disabled {
+  opacity: 0.5;
+}
+.move-page-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+}
+.move-page-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.move-page-item > svg {
+  flex: none;
+  opacity: 0.45;
+}
 .shortcut-form {
   display: flex;
   flex-direction: column;
@@ -1481,6 +2230,81 @@ button:disabled {
   font-size: 11px;
   padding-bottom: 13px;
 }
+/* The page icon editor: a preview of what the dock will show, the emoji
+   field, a one-tap palette and the upload. */
+.page-icon-editor {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding-top: 16px;
+}
+.page-icon-preview {
+  display: grid;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 16px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  overflow: hidden;
+}
+.page-icon-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.page-icon-preview .page-icon-emoji {
+  font-size: 24px;
+}
+.page-icon-preview .page-icon-letter {
+  font-size: 19px;
+  font-weight: 500;
+}
+.page-icon-fields {
+  flex: 1;
+  min-width: 0;
+}
+.page-icon-fields label {
+  display: block;
+  font-size: 12px;
+  color: var(--ngs-text);
+  margin-bottom: 6px;
+}
+.page-icon-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 12px;
+}
+.page-icon-suggestion {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.page-icon-suggestion:hover {
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+.page-icon-hint {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--ngs-text-dim);
+}
+.page-icon-error {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ink-warn);
+}
 .editor-order b {
   font-weight: 400;
   margin-left: 10px;
@@ -1538,14 +2362,26 @@ button:disabled {
     margin-top: 55px;
   }
   .shortcuts-section {
-    margin-top: 35px;
+    margin-top: 43px;
   }
 }
 /* A short desktop window needs a coordinated density change. Keeping this
    height rule separate from the phone breakpoint prevents a wide 800x600
    window from inheriting a narrow layout, while every vertical measure comes
-   down together instead of making one disproportionately tiny control. */
-@media (max-height: 700px) and (min-width: 601px) {
+   down together instead of making one disproportionately tiny control. The
+   compact range runs through 999px because the dock's extra row and the
+   spacious 1000px+ layout otherwise overlap on 820–960px-tall windows. */
+@media (max-height: 999px) and (min-width: 601px) {
+  /* The compact density. The tiles shrink together, and so do their corners.
+     One copy of the metrics, read by the desktop grid and by the sheet. */
+  .nico-dialog:has(.folder-dialog),
+  .shortcuts-section {
+    --desktop-cell: 72px;
+    --desktop-row: 78px;
+    --desktop-gap: 8px;
+    --shortcut-glass-size: 54px;
+    --folder-glass-size: 140px;
+  }
   .page-header {
     height: 70px;
   }
@@ -1571,24 +2407,11 @@ button:disabled {
   }
   .shortcuts-section {
     width: min(700px, 100%);
-    margin-top: 14px;
+    margin-top: 22px;
     margin-bottom: 12px;
-  }
-  .shortcut-toolbar {
-    padding-bottom: 8px;
-  }
-  .shortcut-grid {
-    gap: 12px 8px;
-  }
-  .shortcut-item {
-    width: 72px;
   }
   .shortcut-link {
     gap: 8px;
-  }
-  .shortcut-glass {
-    width: 54px;
-    height: 54px;
   }
   .site-icon {
     width: 26px;
@@ -1599,6 +2422,13 @@ button:disabled {
   }
   .empty-hint {
     margin-top: 12px;
+  }
+  .page-dock {
+    padding-top: 2px;
+  }
+  .dock-page-icon {
+    width: 30px;
+    height: 30px;
   }
   .page-footer {
     min-height: 64px;
@@ -1629,12 +2459,22 @@ button:disabled {
     display: none;
   }
 }
-@media (max-width: 900px) and (min-height: 701px) {
+@media (max-width: 900px) and (min-height: 1000px) {
   .main-content {
     padding-top: clamp(34px, 8dvh, 74px);
   }
 }
 @media (max-width: 600px) {
+  /* The phone density. One copy of the metrics, read by the desktop grid and
+     by the sheet. */
+  .nico-dialog:has(.folder-dialog),
+  .shortcuts-section {
+    --desktop-cell: 72px;
+    --desktop-row: 80px;
+    --desktop-gap: 9px;
+    --shortcut-glass-size: 56px;
+    --folder-glass-size: 140px;
+  }
   .page-shell {
     padding: 0 22px;
   }
@@ -1671,18 +2511,33 @@ button:disabled {
   .search-input .ngs-input-inner {
     height: 55px;
   }
-  .shortcut-grid {
-    gap: 20px 9px;
-  }
   .shortcuts-section {
-    margin-top: 28px;
+    margin-top: 36px;
   }
-  .shortcut-item {
-    width: 72px;
+  /* The bottom-right cluster keeps only its icons on a phone: the labels
+     would push the settings button off the row. */
+  .footer-action-label {
+    display: none;
   }
-  .shortcut-glass {
-    width: 56px;
-    height: 56px;
+  .footer-icon {
+    width: 26px !important;
+    height: 26px !important;
+  }
+  .footer-actions {
+    gap: 3px;
+  }
+  .folder-dialog {
+    gap: 13px;
+  }
+  .dock-inner {
+    max-width: calc(100vw - 44px);
+  }
+  .dock-page-icon {
+    width: 30px;
+    height: 30px;
+  }
+  .page-dock {
+    padding-top: 2px;
   }
   .empty-hint {
     font-size: 10px;
@@ -1823,6 +2678,9 @@ button:disabled {
     font-size: 10px;
   }
 }
+/* No touch-only badge rule: the badge answers the pointer and the keyboard
+   in every container, on a phone exactly as on a desktop. The desktop tile,
+   the folder tile and the tiles of an opened folder share one badge rule. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *:before,
@@ -1834,8 +2692,25 @@ button:disabled {
   .ngs-motion {
     transform: none !important;
   }
-  .shortcut-link:hover .shortcut-glass {
+  .shortcut-item.folder-drop-target,
+  .app .shortcut-item.folder-drop-target .shortcut-link .shortcut-glass,
+  .shortcut-link:hover .shortcut-glass,
+  .folder-tile:hover .folder-glass,
+  .dock-page:hover .dock-page-icon,
+  .dock-page.is-drop-over .dock-page-icon {
     transform: none;
+  }
+  /* Folder previews are decorative; skip their stagger/scale entirely rather
+     than holding an empty-but-fading cell. */
+  .folder-preview,
+  .folder-mini-icon,
+  .folder-stack-layer,
+  .folder-site {
+    animation: none !important;
+  }
+  .folder-mini-icon.is-leaving,
+  .folder-stack-layer.is-leaving {
+    display: none;
   }
 }
 /* Track height, knob and padding come from the kit's sm size — the same

@@ -1,4 +1,13 @@
-import { ARTWORKS, DEFAULT_GLASS_SETTINGS } from "../data";
+import {
+  ARTWORKS,
+  DEFAULT_GLASS_SETTINGS,
+  MAX_FOLDER_NAME,
+  MAX_FOLDERS,
+  MAX_PAGE_ITEMS,
+  MAX_PAGE_NAME,
+  MAX_PAGES,
+  createDefaultPage,
+} from "../data";
 import {
   DEFAULT_ENGINE_ID,
   MAX_CUSTOM_ENGINES,
@@ -6,7 +15,17 @@ import {
   SEARCH_PLACEHOLDER,
   isBuiltInEngineId,
 } from "./engines";
-import type { AppState, BackupV1, CustomEngine, GlassMode } from "../types";
+import type {
+  AppState,
+  BackupV1,
+  CustomEngine,
+  DesktopFolder,
+  DesktopItem,
+  DesktopPage,
+  GlassMode,
+  Shortcut,
+} from "../types";
+import { parsePageIcon } from "./pageIcon";
 import { t } from "./i18n";
 
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -83,6 +102,105 @@ export function normalizeSearchTemplate(input: unknown): string {
   if (countToken(normalized, QUERY_PROBE) !== 1)
     throw new Error(t().lib.validation.searchUrlPlaceholder);
   return normalized.replace(QUERY_PROBE, SEARCH_PLACEHOLDER);
+}
+
+/**
+ * Validates folder records and marks their members as placed, so a site can
+ * never sit both in a folder and at the top level of a page. Folder ids are
+ * checked here; pages then ensure each folder appears on at most one page.
+ */
+function parseFolders(
+  value: unknown,
+  shortcuts: ReadonlyMap<string, Shortcut>,
+  placedShortcuts: Set<string>,
+): DesktopFolder[] {
+  if (!Array.isArray(value) || value.length > MAX_FOLDERS) return fail();
+  // Ids only need to be unique within their own collection: `DesktopItem.type`
+  // already disambiguates shortcut references from folder references.
+  const ids = new Set<string>();
+  return value.map((item) => {
+    if (
+      !record(item) ||
+      !boundedString(item.id, 100) ||
+      !boundedString(item.name, MAX_FOLDER_NAME) ||
+      !Array.isArray(item.shortcutIds) ||
+      ids.has(item.id)
+    )
+      return fail();
+    ids.add(item.id);
+    const shortcutIds: string[] = [];
+    for (const id of item.shortcutIds) {
+      if (
+        !boundedString(id, 100) ||
+        !shortcuts.has(id) ||
+        placedShortcuts.has(id)
+      )
+        return fail();
+      placedShortcuts.add(id);
+      shortcutIds.push(id);
+    }
+    return { id: item.id, name: item.name.trim(), shortcutIds };
+  });
+}
+
+/**
+ * Validates pages and every top-level reference. Placements are global: a
+ * shortcut may appear once across all pages/folders, and a folder may appear
+ * on only one page. Unplaced shortcuts/folders stay in the directory for
+ * compatibility with callers that still edit `state.shortcuts` directly.
+ *
+ * A page icon arrived after the pages themselves, so it migrates leniently: a
+ * page without one (or with an unusable one) simply falls back to the first
+ * letter of its name.
+ */
+function parsePages(
+  value: unknown,
+  shortcuts: ReadonlyMap<string, Shortcut>,
+  folderIds: ReadonlySet<string>,
+  placedShortcuts: Set<string>,
+): DesktopPage[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_PAGES)
+    return fail();
+  const pageIds = new Set<string>();
+  const placedFolders = new Set<string>();
+  return value.map((page) => {
+    if (
+      !record(page) ||
+      !boundedString(page.id, 100) ||
+      !boundedString(page.name, MAX_PAGE_NAME) ||
+      !Array.isArray(page.items) ||
+      page.items.length > MAX_PAGE_ITEMS ||
+      pageIds.has(page.id)
+    )
+      return fail();
+    pageIds.add(page.id);
+    const items: DesktopItem[] = [];
+    for (const item of page.items) {
+      if (
+        !record(item) ||
+        !boundedString(item.id, 100) ||
+        (item.type !== "shortcut" && item.type !== "folder")
+      )
+        return fail();
+      if (item.type === "shortcut") {
+        if (!shortcuts.has(item.id) || placedShortcuts.has(item.id))
+          return fail();
+        placedShortcuts.add(item.id);
+      } else {
+        if (!folderIds.has(item.id) || placedFolders.has(item.id))
+          return fail();
+        placedFolders.add(item.id);
+      }
+      items.push({ type: item.type, id: item.id });
+    }
+    const icon = parsePageIcon(page.icon);
+    return {
+      id: page.id,
+      name: page.name.trim(),
+      items,
+      ...(icon ? { icon } : {}),
+    };
+  });
 }
 
 export function parseState(value: unknown): AppState {
@@ -205,6 +323,37 @@ export function parseState(value: unknown): AppState {
       ...(iconDataUrl ? { iconDataUrl } : {}),
     };
   });
+  const shortcutsById = new Map(shortcuts.map((item) => [item.id, item]));
+  const placedShortcuts = new Set<string>();
+  const rawPages = value.pages;
+  const rawFolders = value.folders;
+  let pages: DesktopPage[];
+  let folders: DesktopFolder[];
+  if (rawPages === undefined) {
+    // States written before the desktop layout existed only have `shortcuts`:
+    // migrate every site onto the default first page in its stored order.
+    // Folders never existed in that schema, so a non-empty list without pages
+    // is corrupt rather than legacy.
+    if (
+      rawFolders !== undefined &&
+      !(Array.isArray(rawFolders) && rawFolders.length === 0)
+    )
+      return fail();
+    folders = [];
+    const page = createDefaultPage();
+    page.items = shortcuts.map((item) => ({ type: "shortcut", id: item.id }));
+    pages = [page];
+  } else {
+    // `folders` was added together with `pages`; when only the latter exists
+    // the folder list defaults to empty and folder items then fail as dangling.
+    folders = parseFolders(
+      rawFolders === undefined ? [] : rawFolders,
+      shortcutsById,
+      placedShortcuts,
+    );
+    const folderIds = new Set(folders.map((folder) => folder.id));
+    pages = parsePages(rawPages, shortcutsById, folderIds, placedShortcuts);
+  }
   // Reconstruct allowed fields; never merge arbitrary imported keys into state.
   return {
     version: 1,
@@ -235,6 +384,8 @@ export function parseState(value: unknown): AppState {
       customEngines,
     },
     shortcuts,
+    pages,
+    folders,
   };
 }
 

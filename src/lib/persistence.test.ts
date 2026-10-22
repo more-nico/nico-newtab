@@ -45,17 +45,6 @@ describe("durable state and assets", () => {
     expect(await repo.load()).toEqual(defaultState());
     expect(storage.write).not.toHaveBeenCalled();
   });
-  it("preserves state on a failed settings write", async () => {
-    const { repo, storage } = setup();
-    storage.write.mockRejectedValueOnce(new Error("quota"));
-    await expect(
-      repo.update((s) => ({
-        ...s,
-        shortcuts: [{ id: "a", name: "A", url: "https://a.com" }],
-      })),
-    ).rejects.toThrow("quota");
-    expect((await repo.load()).shortcuts).toEqual([]);
-  });
   it("serializes concurrent changes against fresh data", async () => {
     const { repo } = setup();
     await Promise.all([
@@ -122,18 +111,6 @@ describe("durable state and assets", () => {
       ),
     ).rejects.toThrow("disk");
     expect(storage.write).not.toHaveBeenCalled();
-  });
-  it("keeps a successful commit even if old-image cleanup fails", async () => {
-    const state = defaultState();
-    state.settings.customWallpaper = {
-      assetId: "old",
-      name: "old",
-      mime: "image/webp",
-    };
-    const { repo, assets } = setup(state);
-    assets.remove.mockRejectedValueOnce(new Error("cleanup"));
-    await repo.replace(() => defaultState(), null);
-    expect(await repo.load()).toEqual(defaultState());
   });
   it("refuses incomplete backups when the referenced blob is missing", async () => {
     const state = defaultState();

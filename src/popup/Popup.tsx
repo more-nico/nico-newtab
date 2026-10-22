@@ -139,7 +139,11 @@ export function Popup() {
           throw new Error(m.popup.errors.duplicate);
         if (current.shortcuts.length >= MAX_SHORTCUTS)
           throw new Error(m.popup.errors.maxShortcuts(MAX_SHORTCUTS));
-        current.shortcuts.push({ id: crypto.randomUUID(), name: value, url });
+        const id = crypto.randomUUID();
+        current.shortcuts.push({ id, name: value, url });
+        // The popup has no active desktop page; place saved sites on the first
+        // page so they appear on the new tab immediately.
+        current.pages[0].items.push({ type: "shortcut", id });
         return current;
       });
       setStatus("saved");

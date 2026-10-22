@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type DragEvent,
   type ReactNode,
 } from "react";
 import { GlassButton, GlassSurface } from "nico-glass-kit";
@@ -25,6 +26,9 @@ export function Modal({
   children,
   wide = false,
   onClose,
+  onDragOver,
+  onDragEnter,
+  onDrop,
 }: {
   /** Accessible name for the dialog. */
   label: string;
@@ -36,6 +40,9 @@ export function Modal({
   /** Fixed 720px layout with a fixed height instead of fitting the content. */
   wide?: boolean;
   onClose: () => void;
+  onDragOver?: (event: DragEvent<HTMLDivElement>) => void;
+  onDragEnter?: (event: DragEvent<HTMLDivElement>) => void;
+  onDrop?: (event: DragEvent<HTMLDivElement>) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -143,6 +150,9 @@ export function Modal({
     <div
       ref={host}
       className={`nico-overlay${leaving ? " is-leaving" : ""}`}
+      onDragOver={onDragOver}
+      onDragEnter={onDragEnter}
+      onDrop={onDrop}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) dismiss();
       }}

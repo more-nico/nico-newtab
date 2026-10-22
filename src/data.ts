@@ -1,4 +1,26 @@
-import type { AppState, Artwork, GlassSettings } from "./types";
+import type { AppState, Artwork, DesktopPage, GlassSettings } from "./types";
+import { t } from "./lib/i18n";
+
+/** Stable id for the page that legacy states migrate onto. */
+export const DEFAULT_PAGE_ID = "page-default";
+/**
+ * The name of the first page, in the user's language. A fresh installation
+ * starts on it, and a state written before pages existed migrates onto it.
+ */
+export function defaultPageName(): string {
+  return t().app.desktop.homePage;
+}
+/** Layout limits shared by validation and the UI. */
+export const MAX_PAGES = 20;
+export const MAX_PAGE_NAME = 24;
+export const MAX_FOLDERS = 100;
+export const MAX_FOLDER_NAME = 24;
+export const MAX_PAGE_ITEMS = 500;
+
+/** Fresh default page; callers may mutate the returned arrays. */
+export function createDefaultPage(): DesktopPage {
+  return { id: DEFAULT_PAGE_ID, name: defaultPageName(), items: [] };
+}
 
 /** Mirrors nico-glass-kit's playground DEFAULT_PARAMS exactly. */
 export const DEFAULT_GLASS_SETTINGS: GlassSettings = {
@@ -60,5 +82,7 @@ export function defaultState(): AppState {
       customEngines: [],
     },
     shortcuts: [],
+    pages: [createDefaultPage()],
+    folders: [],
   };
 }

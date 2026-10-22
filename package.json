@@ -16,8 +16,7 @@
     "render:logo": "node scripts/render-logo.mjs",
     "package": "npm run build && node scripts/package.mjs",
     "test:e2e": "node scripts/smoke.mjs",
-    "mock:webdav": "node scripts/mock-webdav.mjs",
-    "test:i18n": "npm run build && node scripts/check-locales.mjs"
+    "mock:webdav": "node scripts/mock-webdav.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.577.0",

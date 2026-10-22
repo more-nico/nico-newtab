@@ -69,10 +69,47 @@ export interface Shortcut {
    */
   iconDataUrl?: string;
 }
+/** One top-level tile on a desktop page: a site or a folder. */
+export interface DesktopItem {
+  type: "shortcut" | "folder";
+  id: string;
+}
+/**
+ * The abbreviated icon a page shows in the dock. It is either a single emoji
+ * or an uploaded image; the full page name stays available as text (the dock
+ * label on hover), so the icon never has to carry the name on its own.
+ */
+export type PageIcon =
+  | { kind: "emoji"; value: string }
+  | { kind: "image"; dataUrl: string };
+/** A single mobile-desktop page. Pages only contain top-level items. */
+export interface DesktopPage {
+  id: string;
+  name: string;
+  items: DesktopItem[];
+  /** Custom dock icon; absent means "use the page name's first letter". */
+  icon?: PageIcon;
+}
+/**
+ * A folder shown as one tile on exactly one page. Membership lives here rather
+ * than in `DesktopItem`, so a folder's contents never become nested pages.
+ */
+export interface DesktopFolder {
+  id: string;
+  name: string;
+  shortcutIds: string[];
+}
 export interface AppState {
   version: 1;
   settings: AppSettings;
+  /**
+   * Canonical directory of every site, independent of where it is displayed.
+   * `pages`/`folders` refer to entries by id.
+   */
   shortcuts: Shortcut[];
+  /** Mobile-desktop layout. Always contains at least one page. */
+  pages: DesktopPage[];
+  folders: DesktopFolder[];
 }
 export interface Artwork {
   id: string;

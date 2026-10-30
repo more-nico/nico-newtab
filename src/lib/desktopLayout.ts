@@ -4,9 +4,8 @@
  *
  * The grid is a plain CSS grid: the tiles are auto-placed in document order, a
  * folder covers a 2×2 block of cells, and the number of tracks is capped by
- * the width the section can actually hold. The only thing decided here is the
- * track count, and it is decided by simulating that auto-placement for every
- * candidate width.
+ * the width the section can actually hold. The grid uses the available tracks
+ * before wrapping tiles to another row.
  *
  * The order a drag produces is not decided here: it is the one shared
  * definition in `lib/reorder`, which the folder sheet uses as well.
@@ -122,14 +121,9 @@ export function simulateDesktopGrid(
 /**
  * Picks the track count for the desktop grid.
  *
- * The rows are what make the page tall, so the layout with the fewest rows
- * wins: a screen wide enough for several tracks is expected to use them
- * instead of stacking the tiles in one long column. Ties go to the fewest
- * holes and then to the narrowest grid, so a page with a handful of tiles
- * stays a compact, centred cluster rather than a wide band with a ragged last
- * row. (The holes and the width move together: the tiles occupy a fixed
- * number of cells, so at a fixed row count the narrower grid is the one with
- * fewer holes.)
+ * Use the available width before wrapping: choosing a narrower grid to fill
+ * its last row would leave large unused gutters inside the desktop frame.
+ * A page with too few tiles to fill one row only needs their combined spans.
  *
  * `maxCols` is the number of tracks the measured width can hold. The caller
  * measures it rather than guessing it from a breakpoint, which is what keeps a
@@ -144,21 +138,8 @@ export function chooseDesktopColumns(
   // A folder covers two tracks, so a page holding one needs two of them even
   // when the width would only fit a single track.
   const min = items.some((item) => item.type === "folder") ? 2 : 1;
-  let best = min;
-  let bestShape = simulateDesktopGrid(items, min);
-  for (let cols = min + 1; cols <= Math.max(min, limit); cols++) {
-    const shape = simulateDesktopGrid(items, cols);
-    // Fewer rows first, then fewer holes, then the narrower grid — the
-    // candidates are walked upwards, so a full tie keeps the narrower one.
-    if (
-      shape.rows < bestShape.rows ||
-      (shape.rows === bestShape.rows && shape.holes < bestShape.holes)
-    ) {
-      best = cols;
-      bestShape = shape;
-    }
-  }
-  return best;
+  const totalSpan = items.reduce((sum, item) => sum + spanOf(item), 0);
+  return Math.max(min, Math.min(limit, totalSpan));
 }
 
 /** A page item that the desktop can reorder: a site or a folder. */

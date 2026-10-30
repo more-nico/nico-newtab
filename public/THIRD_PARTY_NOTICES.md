@@ -136,7 +136,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 ## 随扩展分发的软件
 
-### nico-glass-kit 0.3.2
+### nico-glass-kit 0.4.0
 
 MIT License
 

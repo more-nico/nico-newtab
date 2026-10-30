@@ -12,7 +12,7 @@ describe("desktop layout", () => {
   it.each([
     [13, 7, 7],
     [13, 4, 4],
-    [8, 7, 4],
+    [8, 7, 7],
   ])(
     "lays out %i sites within %i available tracks using %i columns",
     (count, available, expected) => {

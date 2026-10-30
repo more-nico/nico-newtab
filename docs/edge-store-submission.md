@@ -1,6 +1,6 @@
 # Nico · Microsoft Edge Add-ons 提交材料
 
-> 适用对象：Nico `1.0.0`（Manifest V3，首发语言：全球；UI 支持 zh-CN / en / ja）。
+> 适用对象：Nico `1.1.0`（Manifest V3，首发语言：全球；UI 支持 zh-CN / en / ja）。
 > 依据：Microsoft Edge Add-ons [发布文档](https://learn.microsoft.com/en-us/microsoft-edge/extensions/publish/publish-extension)、[开发者政策](https://learn.microsoft.com/en-us/legal/microsoft-edge/extensions/developer-policies)、[注册文档](https://learn.microsoft.com/en-us/microsoft-edge/extensions/publish/create-dev-account)。
 > 本文只记录 Partner Center 中真实存在的字段；标注「建议」的选项可按实际审核反馈调整。
 
@@ -9,7 +9,7 @@
 | 项目           | 内容                                                                 |
 | -------------- | -------------------------------------------------------------------- |
 | 开发者账号     | Microsoft 账号（MSA）注册 Partner Center，个人账号即可；**无注册费** |
-| 包             | `release/nico-newtab-1.0.0.zip`（`manifest.json` 位于 zip 根目录）   |
+| 包             | `release/nico-newtab-1.1.0.zip`（`manifest.json` 位于 zip 根目录）   |
 | 认证时长       | 通常最长约 7 个工作日                                                |
 | 可见性 / 市场  | Public / 全部市场（首发全球）                                        |
 | 类别（建议）   | Fun（或 Partner Center 列表中最接近「壁纸 / 外观」的类别）           |

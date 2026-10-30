@@ -53,7 +53,7 @@ Nico 是一个 Chrome / Edge 新标签页扩展：用时间、搜索和常用网
 
 需要桌面版 Chrome / Edge 120 或更高版本。
 
-1. 从 [GitHub Releases](https://github.com/more-nico/nico-newtab/releases/latest) 下载 `nico-newtab-1.0.0.zip` 并解压，或使用构建后的 `dist/` 文件夹。
+1. 从 [GitHub Releases](https://github.com/more-nico/nico-newtab/releases/latest) 下载 `nico-newtab-1.1.0.zip` 并解压，或使用构建后的 `dist/` 文件夹。
 2. 打开 `chrome://extensions` 或 `edge://extensions`。
 3. 开启“开发者模式”，点击“加载已解压的扩展程序”。
 4. 选择包含 `manifest.json` 的 `dist/` 文件夹。
@@ -160,7 +160,7 @@ npm run mock:webdav  # 本地模拟坚果云 WebDAV，供网页预览联调同�
 npm run render:logo   # 从 assets/logo/*.svg 重新生成全部图标 PNG
 node scripts/capture-store-screenshots.mjs  # 生成三语商店截图（需先 build）
 npm run test:full    # 提交或打包前的完整检查
-npm run package      # 构建并生成 release/nico-newtab-1.0.0.zip
+npm run package      # 构建并生成 release/nico-newtab-1.1.0.zip
 ```
 
 界面文案统一放在 `src/lib/i18n/`（zh-CN / en / ja），组件里不要硬编码中文字符串；浏览器脚本固定 `locale: "zh-CN"`，避免 Playwright 默认的 en-US 语言影响既有中文断言。Microsoft Edge 商店的提交材料见 [`docs/edge-store-submission.md`](docs/edge-store-submission.md)。

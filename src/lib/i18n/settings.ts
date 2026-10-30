@@ -162,7 +162,7 @@ const zh = {
     },
     privacyNote:
       "无需账号，不收集使用数据。卸载扩展会清除本地内容，请提前备份。",
-    version: "印象新标签页 · 1.0.0",
+    version: "印象新标签页 · 1.1.0",
     thirdPartyNotices: "素材与开源许可 ↗",
     privacyPolicy: "隐私政策",
   },
@@ -335,7 +335,7 @@ const en: SettingsMessages = {
     },
     privacyNote:
       "No account needed and no usage data collected. Uninstalling the extension clears local content, so back it up first.",
-    version: "Impression New Tab · 1.0.0",
+    version: "Impression New Tab · 1.1.0",
     thirdPartyNotices: "Assets and open-source licenses ↗",
     privacyPolicy: "Privacy policy",
   },
@@ -503,7 +503,7 @@ const ja: SettingsMessages = {
     },
     privacyNote:
       "アカウントは不要で、利用データも収集しません。拡張機能をアンインストールするとローカルの内容が削除されるため、事前にバックアップしてください。",
-    version: "インプレッション ニュータブ · 1.0.0",
+    version: "インプレッション ニュータブ · 1.1.0",
     thirdPartyNotices: "素材とオープンソースライセンス ↗",
     privacyPolicy: "プライバシーポリシー",
   },

@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 
 let text = "# Nico Newtab · 第三方素材与开源许可\n\n";
+text += `## Nico 项目许可\n\n${await readFile("LICENSE", "utf8")}\n\n`;
 text +=
   "## 内置画作\n\n所有作品的原作均已进入公有领域，馆藏均为芝加哥艺术博物馆。其开放图像政策见 https://www.artic.edu/open-access/open-access-images 。\n\n";
 text +=

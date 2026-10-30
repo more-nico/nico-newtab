@@ -9,3 +9,8 @@ test-results/
 AGENTS.md
 .workbuddy/
 .workbuddy-ai/
+
+.DS_Store
+.env
+.env.*
+!.env.example

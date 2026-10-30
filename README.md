@@ -217,6 +217,8 @@ assets/fonts/      logo 花体字及其 OFL 许可证
 
 ## 素材与许可
 
+本项目原创代码采用 [MIT License](LICENSE)。第三方依赖、字体、画作及搜索引擎商标保留各自的许可与权利说明，见下文及第三方声明。
+
 三幅内置画作来自芝加哥艺术博物馆公开作品信息和 Wikimedia Commons 公有领域复制图；来源、许可证和处理说明见 [`public/THIRD_PARTY_NOTICES.md`](public/THIRD_PARTY_NOTICES.md)。
 
 Nico 的 logo 为项目原创 SVG（`assets/logo/`），SVG 内嵌的 logo 花体字采用 SIL Open Font License（字体与许可证见 `assets/fonts/`），与界面使用的系统字体相互独立。`nico-glass-kit` 依赖采用 MIT License；本项目使用的画作与运行时依赖以第三方说明为准。`assets/` 中的 GIF 是用本地页面和本项目内置壁纸录制的演示素材。
